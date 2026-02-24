@@ -1,11 +1,11 @@
 package models
 
 import (
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 type User struct {
-	ID       uuid.UUID
-	Username string
-	Password []byte
+	ID       uuid.UUID `json:"id"`
+	Username string `json:"username"`
+	Password []byte `json:"-"`
 }
