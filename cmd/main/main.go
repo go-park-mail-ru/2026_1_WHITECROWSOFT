@@ -2,9 +2,8 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -13,15 +12,16 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	r := mux.NewRouter()
+	host := "127.0.0.1:8000"
+	r := http.NewServeMux()
 
-	r.HandleFunc("/ping", pingHandler).Methods("GET")
-	
+	r.HandleFunc("GET /ping", pingHandler)
+
 	srv := &http.Server{
 		Handler: r,
-		Addr: "127.0.0.1:8000",
+		Addr:    host,
 	}
 
-	log.Println("Сервер запущен на http://127.0.0.1:8000")
+	slog.Info("Server started", "host", host)
 	log.Fatal(srv.ListenAndServe())
 }
