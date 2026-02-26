@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+
+	"wcs/internal/auth"
 )
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -12,9 +14,16 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	host := "127.0.0.1:8000"
+
+	authHandler := &authHandlers.AuthHandler{
+		JWTSecret: "haha-secret-key-open", 
+		UserSet:   authHandlers.NewUserSet(),
+	}
+
 	r := http.NewServeMux()
 
 	r.HandleFunc("GET /ping", pingHandler)
+	r.HandleFunc("POST /signup", authHandler.SignupUser)
 
 	srv := &http.Server{
 		Handler: r,
