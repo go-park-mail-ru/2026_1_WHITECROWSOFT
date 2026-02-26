@@ -1,14 +1,13 @@
 package main
 
 import (
-	"log"
 	"log/slog"
 	"net/http"
+	"os"
 )
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("pong"))
+	w.Write([]byte("pong")) // прописывать 200 статус не нужно, т.к. w.Write() устанавливает его сам если он ещё не установлен
 }
 
 func main() {
@@ -23,5 +22,8 @@ func main() {
 	}
 
 	slog.Info("Server started", "host", host)
-	log.Fatal(srv.ListenAndServe())
+	if err := srv.ListenAndServe(); err != nil {
+		slog.Error("Server failed", "error", err)
+		os.Exit(1)
+	}
 }
