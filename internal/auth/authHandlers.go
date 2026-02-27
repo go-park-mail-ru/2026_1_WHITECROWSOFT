@@ -2,37 +2,40 @@ package authHandlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
-	"errors"
+	"wcs/internal/dto"
+
+	"github.com/go-playground/validator/v10"
+
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
-	"wcs/internal/dto"
 )
 
 const CookieName = "MinoCookieJWT"
 
 type AuthHandler struct {
-	JWTSecret 	string
-	UserSet *UserSet
+	JWTSecret string
+	UserSet   *UserSet
 }
 
 type User struct {
-    ID       string
-    Login    string
-    Password string 
+	ID       string
+	Login    string
+	Password string
 }
 
 type UserSet struct {
-    users map[string]*User
+	users map[string]*User
 	mu    sync.RWMutex
 }
 
 type UserResponse struct {
-    ID    string `json:"id"`
-    Login string `json:"login"`
-    Token string `json:"token"`
+	ID    string `json:"id"`
+	Login string `json:"login"`
+	Token string `json:"token"`
 }
 
 func NewUserSet() *UserSet {
@@ -43,29 +46,30 @@ func NewUserSet() *UserSet {
 }
 
 var ErrUserExists = errors.New("user already exists")
+var validate = validator.New()
 
 func (s *UserSet) CreateUser(login, password string) (*User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
-    if _, exists := s.users[login]; exists {
-        return nil, ErrUserExists
-    }
 
-    user := &User{
-        ID:       uuid.New().String(),
-        Login:    login,
-        Password: password,
-    }
-    
-    s.users[login] = user
-    return user, nil
+	if _, exists := s.users[login]; exists {
+		return nil, ErrUserExists
+	}
+
+	user := &User{
+		ID:       uuid.New().String(),
+		Login:    login,
+		Password: password,
+	}
+
+	s.users[login] = user
+	return user, nil
 }
 
 func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var input dto.SignUpInput
+	var input dto.SignUpUser
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -73,10 +77,13 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	
-	if input.Login == "" || input.Password == "" {
+
+	if err := validate.Struct(input); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Login and password are required"})
+		json.NewEncoder(w).Encode(map[string]string{
+			"error":   "validation failed",
+			"details": err.Error(),
+		})
 		return
 	}
 
@@ -84,37 +91,37 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "failed to create user"})
-		return 
+		return
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
-		"login": user.Login,
-		"exp": time.Now().Add(time.Hour).Unix(),
+		"login":   user.Login,
+		"exp":     time.Now().Add(time.Hour).Unix(),
 	})
 
 	tokenStr, err := token.SignedString([]byte(a.JWTSecret))
-    if err != nil {
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "failed to create user"})
-		return 
-    }
+		return
+	}
 
 	cookie := &http.Cookie{
 		Name:  CookieName,
 		Value: tokenStr,
 		//HttpOnly: true,
-		Secure: true,
+		Secure:  true,
 		Expires: time.Now().Add(time.Hour),
-		Path: "/",
+		Path:    "/",
 	}
 	http.SetCookie(w, cookie)
 
 	resp := UserResponse{
-        ID:    user.ID,
-        Login: user.Login,
-        Token: tokenStr,
-    }
+		ID:    user.ID,
+		Login: user.Login,
+		Token: tokenStr,
+	}
 	w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(resp)
 }
