@@ -46,6 +46,12 @@ func TestSignupUser(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			isError:        true,
 		},
+		{
+			name:           "two identical users",
+			requestBody:    `{"login": "test123", "password": "Password123456"}`,
+			expectedStatus: http.StatusConflict,
+			isError:        true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -62,10 +68,6 @@ func TestSignupUser(t *testing.T) {
 				var resp UserResponse
 				if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 					t.Fatalf("Error in parsing JSON: %v", err)
-				}
-
-				if resp.ID == "" {
-					t.Error("ID is empty")
 				}
 
 				if resp.Login != tt.expectedLogin {

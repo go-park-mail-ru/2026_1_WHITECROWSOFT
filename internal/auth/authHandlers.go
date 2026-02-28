@@ -14,7 +14,10 @@ import (
 	"github.com/google/uuid"
 )
 
-const CookieName = "MinoCookieJWT"
+const (
+	CookieName    = "NoterianCookieJWT"
+	CookieTimeJWT = time.Hour
+)
 
 type AuthHandler struct {
 	JWTSecret string
@@ -66,44 +69,50 @@ func (s *UserSet) CreateUser(login, password string) (*User, error) {
 	return user, nil
 }
 
-func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func WriteResponse(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
 
-	var input dto.SignUpUser
-	err := json.NewDecoder(r.Body).Decode(&input)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid input"})
+func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
+	var signUpUser dto.SignUpUser
+
+	if err := json.NewDecoder(r.Body).Decode(&signUpUser); err != nil {
+		WriteResponse(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid input",
+		})
 		return
 	}
 	defer r.Body.Close()
 
-	if err := validate.Struct(input); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+	if err := validate.Struct(signUpUser); err != nil {
+		WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error":   "validation failed",
 			"details": err.Error(),
 		})
 		return
 	}
 
-	user, err := a.UserSet.CreateUser(input.Login, input.Password)
+	user, err := a.UserSet.CreateUser(signUpUser.Login, signUpUser.Password)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "failed to create user"})
+		WriteResponse(w, http.StatusConflict, map[string]string{
+			"error":   "failed to create user",
+			"details": err.Error(),
+		})
 		return
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
-		"login":   user.Login,
-		"exp":     time.Now().Add(time.Hour).Unix(),
+		"exp":     time.Now().Add(CookieTimeJWT).Unix(),
 	})
 
 	tokenStr, err := token.SignedString([]byte(a.JWTSecret))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "failed to create user"})
+		WriteResponse(w, http.StatusInternalServerError, map[string]string{
+			"error": "failed to create token",
+		})
 		return
 	}
 
@@ -111,8 +120,8 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		Name:  CookieName,
 		Value: tokenStr,
 		//HttpOnly: true,
-		Secure:  true,
-		Expires: time.Now().Add(time.Hour),
+		//Secure:  true,
+		Expires: time.Now().Add(CookieTimeJWT),
 		Path:    "/",
 	}
 	http.SetCookie(w, cookie)
@@ -122,6 +131,5 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		Login: user.Login,
 		Token: tokenStr,
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resp)
+	WriteResponse(w, http.StatusOK, resp)
 }
