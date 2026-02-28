@@ -8,10 +8,10 @@ import (
 	"time"
 	"wcs/internal/dto"
 
-	"github.com/go-playground/validator/v10"
-
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -20,10 +20,9 @@ const (
 )
 
 var (
-	ErrUserExists         = errors.New("user already exists")
-	ErrUserNotExists      = errors.New("user not found")
-	ErrInvalidCredentials = errors.New("invalid username or password")
-	validate              = validator.New()
+	ErrUserExists    = errors.New("user already exists")
+	ErrUserNotExists = errors.New("user not found")
+	validate         = validator.New()
 )
 
 type AuthHandler struct {
@@ -63,10 +62,15 @@ func (s *UserSet) CreateUser(login, password string) (*User, error) {
 		return nil, ErrUserExists
 	}
 
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
 	user := &User{
 		ID:       uuid.New().String(),
 		Login:    login,
-		Password: password,
+		Password: string(hashPassword),
 	}
 
 	s.users[login] = user
@@ -82,8 +86,9 @@ func (s *UserSet) ValidateUser(login, password string) (*User, error) {
 		return nil, ErrUserNotExists
 	}
 
-	if password != user.Password {
-		return nil, ErrInvalidCredentials
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return nil, err
 	}
 	return user, nil
 }
@@ -160,8 +165,8 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	cookie := &http.Cookie{
 		Name:  CookieName,
 		Value: tokenStr,
-		//HttpOnly: true,
-		//Secure:  true,
+		HttpOnly: true,
+		Secure:  true,
 		Expires: time.Now().Add(CookieTimeJWT),
 		Path:    "/",
 	}
@@ -217,8 +222,8 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  CookieName,
 		Value: tokenStr,
-		//HttpOnly: true,
-		//Secure: true,
+		HttpOnly: true,
+		Secure: true,
 		Expires: time.Now().Add(CookieTimeJWT),
 		Path:    "/",
 	})
@@ -234,8 +239,8 @@ func (a *AuthHandler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  CookieName,
 		Value: "",
-		//HttpOnly: true,
-		//Secure: true,
+		HttpOnly: true,
+		Secure: true,
 		Expires: time.Now().Add(-CookieTimeJWT),
 		Path:    "/",
 	})
