@@ -13,3 +13,8 @@
  - [Frontend](https://github.com/frontend-park-mail-ru/2026_1_WHITECROWSOFT)
  - [Deploy]()
  - [Jira](https://app.striveapp.ru/spaces/83929/165579/tasks)
+
+### Шаблон .env
+JWT_SECRET=
+
+SERVER_HOST=

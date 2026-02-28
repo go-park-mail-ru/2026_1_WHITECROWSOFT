@@ -4,8 +4,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-
 	authHandlers "wcs/internal/auth"
+
+	"github.com/joho/godotenv"
 )
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -13,10 +14,18 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	host := "127.0.0.1:8000"
+	err := godotenv.Load()
+	if err != nil {
+		slog.Warn("No .env file found, using system env")
+	}
+
+	host := os.Getenv("SERVER_HOST")
+	if host == "" {
+		host = "127.0.0.1:8000"
+	}
 
 	authHandler := &authHandlers.AuthHandler{
-		JWTSecret: "haha-secret-key-open",
+		JWTSecret: os.Getenv("JWT_SECRET"),
 		UserSet:   authHandlers.NewUserSet(),
 	}
 
