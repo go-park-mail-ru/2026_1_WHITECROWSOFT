@@ -25,6 +25,7 @@ func main() {
 	r.HandleFunc("GET /ping", pingHandler)
 	r.HandleFunc("POST /signup", authHandler.SignupUser)
 	r.HandleFunc("POST /signin", authHandler.SigninUser)
+	r.HandleFunc("POST /logout", authHandler.LogOutUser)
 
 	srv := &http.Server{
 		Handler: r,

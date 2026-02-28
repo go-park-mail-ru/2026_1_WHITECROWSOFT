@@ -209,3 +209,16 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		Token: tokenStr,
 	})
 }
+
+func (a *AuthHandler) LogOutUser(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name: CookieName,
+		Value: "",
+		//HttpOnly: true,
+		//Secure: true,
+		Expires: time.Now().Add(-CookieTimeJWT),
+		Path: "/",
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}
