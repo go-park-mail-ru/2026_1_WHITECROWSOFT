@@ -19,6 +19,13 @@ const (
 	CookieTimeJWT = time.Hour
 )
 
+var (
+	ErrUserExists         = errors.New("user already exists")
+	ErrUserNotExists      = errors.New("user not found")
+	ErrInvalidCredentials = errors.New("invalid username or password")
+	validate              = validator.New()
+)
+
 type AuthHandler struct {
 	JWTSecret string
 	UserSet   *UserSet
@@ -48,9 +55,6 @@ func NewUserSet() *UserSet {
 	}
 }
 
-var ErrUserExists = errors.New("user already exists")
-var validate = validator.New()
-
 func (s *UserSet) CreateUser(login, password string) (*User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -66,6 +70,21 @@ func (s *UserSet) CreateUser(login, password string) (*User, error) {
 	}
 
 	s.users[login] = user
+	return user, nil
+}
+
+func (s *UserSet) ValidateUser(login, password string) (*User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	user, exists := s.users[login]
+	if !exists {
+		return nil, ErrUserNotExists
+	}
+
+	if password != user.Password {
+		return nil, ErrInvalidCredentials
+	}
 	return user, nil
 }
 
@@ -132,4 +151,61 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		Token: tokenStr,
 	}
 	WriteResponse(w, http.StatusOK, resp)
+}
+
+func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
+	var signInUser dto.SignInUser
+
+	if err := json.NewDecoder(r.Body).Decode(&signInUser); err != nil {
+		WriteResponse(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid input",
+		})
+		return
+	}
+	defer r.Body.Close()
+
+	if err := validate.Struct(signInUser); err != nil {
+		WriteResponse(w, http.StatusBadRequest, map[string]string{
+			"error":   "validation failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	user, err := a.UserSet.ValidateUser(signInUser.Login, signInUser.Password)
+	if err != nil {
+		WriteResponse(w, http.StatusUnauthorized, map[string]string{
+			"error":   "invalid username or password",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID,
+		"exp":     time.Now().Add(time.Hour).Unix(),
+	})
+
+	tokenStr, err := token.SignedString([]byte(a.JWTSecret))
+	if err != nil {
+		WriteResponse(w, http.StatusInternalServerError, map[string]string{
+			"error": "failed to create token",
+		})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:  CookieName,
+		Value: tokenStr,
+		//HttpOnly: true,
+		//Secure: true,
+		Expires: time.Now().Add(CookieTimeJWT),
+		Path:    "/",
+	})
+
+	WriteResponse(w, http.StatusOK, UserResponse{
+		ID:    user.ID,
+		Login: user.Login,
+		Token: tokenStr,
+	})
 }
