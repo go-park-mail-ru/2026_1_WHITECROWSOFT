@@ -242,3 +242,23 @@ func (a *AuthHandler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (a *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookieJWT, err := r.Cookie(CookieName)
+		if err != nil {
+			WriteResponse(w, http.StatusUnauthorized, map[string]string{
+				"error": "unathorized",
+			})
+			return
+		}
+
+		if _, err := validateToken(cookieJWT.Value, a.JWTSecret); err != nil {
+			WriteResponse(w, http.StatusUnauthorized, map[string]string{
+				"error": err.Error(),
+			})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
