@@ -88,6 +88,30 @@ func (s *UserSet) ValidateUser(login, password string) (*User, error) {
 	return user, nil
 }
 
+func generateToken(secretKey string, claims jwt.MapClaims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err := token.SignedString([]byte(secretKey))
+	return tokenStr, err
+}
+
+func validateToken(tokenStr string, secretKey string) (jwt.MapClaims, error) {
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid algorithm")
+		}
+		return []byte(secretKey), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
+}
+
 func WriteResponse(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
@@ -122,12 +146,10 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	tokenStr, err := generateToken(a.JWTSecret, jwt.MapClaims{
 		"user_id": user.ID,
-		"exp":     time.Now().Add(CookieTimeJWT).Unix(),
+		"exp":     time.Now().Add(time.Hour).Unix(),
 	})
-
-	tokenStr, err := token.SignedString([]byte(a.JWTSecret))
 	if err != nil {
 		WriteResponse(w, http.StatusInternalServerError, map[string]string{
 			"error": "failed to create token",
@@ -181,12 +203,10 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	tokenStr, err := generateToken(a.JWTSecret, jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     time.Now().Add(time.Hour).Unix(),
 	})
-
-	tokenStr, err := token.SignedString([]byte(a.JWTSecret))
 	if err != nil {
 		WriteResponse(w, http.StatusInternalServerError, map[string]string{
 			"error": "failed to create token",
@@ -212,12 +232,12 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 
 func (a *AuthHandler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name: CookieName,
+		Name:  CookieName,
 		Value: "",
 		//HttpOnly: true,
 		//Secure: true,
 		Expires: time.Now().Add(-CookieTimeJWT),
-		Path: "/",
+		Path:    "/",
 	})
 
 	w.WriteHeader(http.StatusNoContent)
