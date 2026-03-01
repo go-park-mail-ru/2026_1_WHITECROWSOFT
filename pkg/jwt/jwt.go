@@ -22,7 +22,7 @@ func GenerateToken(userID string, duration time.Duration, secretKey string) (str
 
 func ValidateToken(tokenStr string, secretKey string) (*TokenPayload, error) {
 	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("invalid algorithm")
 		}

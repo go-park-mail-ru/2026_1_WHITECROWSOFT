@@ -8,7 +8,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
 	"wcs/internal/dto"
 	"wcs/internal/models"
 	"wcs/pkg/helpers"
@@ -88,8 +87,9 @@ func (s *UserSet) ValidateUser(login, password string) (*models.User, error) {
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return nil, err
+		return nil, ErrUserNotExists
 	}
+
 	return user, nil
 }
 
@@ -149,6 +149,7 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		Login: user.Username,
 		Token: tokenStr,
 	}
+
 	helpers.WriteResponse(w, http.StatusOK, resp)
 }
 
@@ -175,7 +176,7 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, ErrUserNotExists):
 			helpers.WriteResponse(w, http.StatusUnauthorized, map[string]string{
-				"error": "invalid username or password",
+				"error": "incorrect username or password",
 			})
 		default:
 			helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
@@ -239,7 +240,26 @@ func (a *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 			})
 			return
 		}
+
 		ctx := context.WithValue(r.Context(), "user_id", tokenPayload.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (a *AuthHandler) TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+			"error": "user_id not found in context",
+		})
+		return
+	}
+
+	response := map[string]string{
+		"msg":     "This is a protected endpoint",
+		"user_id": userID,
+		"time":    time.Now().Format(time.RFC3339),
+	}
+
+	helpers.WriteResponse(w, http.StatusOK, response)
 }
