@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -27,6 +28,7 @@ var (
 	ErrUserExists    = errors.New("user already exists")
 	ErrUserNotExists = errors.New("user not found")
 	validate         = validator.New()
+	isSecure         = os.Getenv("IS_SECURE") == "true"
 )
 
 type AuthHandler struct {
@@ -111,9 +113,16 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := a.UserSet.CreateUser(signUpUser.Login, signUpUser.Password)
 	if err != nil {
-		helpers.WriteResponse(w, http.StatusConflict, map[string]string{
-			"error": "failed to create user",
-		})
+		switch {
+		case errors.Is(err, ErrUserExists):
+			helpers.WriteResponse(w, http.StatusConflict, map[string]string{
+				"error": "user already exists",
+			})
+		default:
+			helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+				"error": "internal server error",
+			})
+		}
 		return
 	}
 
@@ -129,7 +138,7 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		Name:     CookieName,
 		Value:    tokenStr,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   isSecure,
 		Expires:  time.Now().Add(CookieTimeJWT),
 		Path:     "/",
 	}
@@ -163,9 +172,16 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := a.UserSet.ValidateUser(signInUser.Login, signInUser.Password)
 	if err != nil {
-		helpers.WriteResponse(w, http.StatusUnauthorized, map[string]string{
-			"error": "invalid username or password",
-		})
+		switch {
+		case errors.Is(err, ErrUserNotExists):
+			helpers.WriteResponse(w, http.StatusUnauthorized, map[string]string{
+				"error": "invalid username or password",
+			})
+		default:
+			helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+				"error": "internal server error",
+			})
+		}
 		return
 	}
 
@@ -181,7 +197,7 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		Name:     CookieName,
 		Value:    tokenStr,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   isSecure,
 		Expires:  time.Now().Add(CookieTimeJWT),
 		Path:     "/",
 	})
@@ -198,7 +214,7 @@ func (a *AuthHandler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 		Name:     CookieName,
 		Value:    "",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   isSecure,
 		Expires:  time.Now().Add(-CookieTimeJWT),
 		Path:     "/",
 	})
