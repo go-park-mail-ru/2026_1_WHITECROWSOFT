@@ -10,8 +10,8 @@ import (
 
 func TestSignupUser(t *testing.T) {
 	authHandler := &AuthHandler{
-		JWTSecret: "haha-secret-key-open",
-		UserSet:   NewUserSet(),
+		jwtSecret: "haha-secret-key-open",
+		userSet:   NewUserSet(),
 	}
 
 	tests := []struct {

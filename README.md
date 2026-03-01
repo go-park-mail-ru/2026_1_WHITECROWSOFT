@@ -16,8 +16,9 @@
 - [Deploy]()
 - [Jira](https://app.striveapp.ru/spaces/83929/165579/tasks)
 
-### Шаблон .env
+### Настройка окружения
 
-JWT_SECRET=
-SERVER_HOST=
-IS_SECURE=
+Для запуска приложения необходимо создать файл `.env` в корневом каталоге. Вы можете использовать [`.env.example`](./.env.example) в качестве шаблона:
+
+```bash
+cp .env.example .env

@@ -24,10 +24,7 @@ func main() {
 		host = "127.0.0.1:8000"
 	}
 
-	authHandler := &authHandlers.AuthHandler{
-		JWTSecret: os.Getenv("JWT_SECRET"),
-		UserSet:   authHandlers.NewUserSet(),
-	}
+	authHandler := authHandlers.NewAuthHandler(os.Getenv("JWT_SECRET"),authHandlers.NewUserSet())
 
 	r := http.NewServeMux()
 

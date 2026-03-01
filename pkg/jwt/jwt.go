@@ -16,8 +16,7 @@ func GenerateToken(userID string, duration time.Duration, secretKey string) (str
 		"user_id": userID,
 		"exp":     time.Now().Add(duration).Unix(),
 	})
-	tokenStr, err := token.SignedString([]byte(secretKey))
-	return tokenStr, err
+	return token.SignedString([]byte(secretKey))
 }
 
 func ValidateToken(tokenStr string, secretKey string) (*TokenPayload, error) {

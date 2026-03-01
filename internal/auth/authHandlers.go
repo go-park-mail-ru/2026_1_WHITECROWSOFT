@@ -31,8 +31,8 @@ var (
 )
 
 type AuthHandler struct {
-	JWTSecret string
-	UserSet   *UserSet
+	jwtSecret string
+	userSet   *UserSet
 }
 
 type UserSet struct {
@@ -44,6 +44,13 @@ type UserResponse struct {
 	ID    string `json:"id"`
 	Login string `json:"login"`
 	Token string `json:"token"`
+}
+
+func NewAuthHandler(secret string, users *UserSet) *AuthHandler {
+	return &AuthHandler{
+		jwtSecret: secret,
+		userSet:   users,
+	}
 }
 
 func NewUserSet() *UserSet {
@@ -97,7 +104,7 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	var signUpUser dto.SignUpUser
 
 	if err := json.NewDecoder(r.Body).Decode(&signUpUser); err != nil {
-		helpers.WriteResponse(w, http.StatusBadRequest, map[string]string{
+		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "invalid input",
 		})
 		return
@@ -105,30 +112,30 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := validate.Struct(signUpUser); err != nil {
-		helpers.WriteResponse(w, http.StatusBadRequest, map[string]string{
+		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "validation failed",
 		})
 		return
 	}
 
-	user, err := a.UserSet.CreateUser(signUpUser.Login, signUpUser.Password)
+	user, err := a.userSet.CreateUser(signUpUser.Login, signUpUser.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrUserExists):
-			helpers.WriteResponse(w, http.StatusConflict, map[string]string{
+			helpers.JSONResponse(w, http.StatusConflict, map[string]string{
 				"error": "user already exists",
 			})
 		default:
-			helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+			helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 				"error": "internal server error",
 			})
 		}
 		return
 	}
 
-	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.JWTSecret)
+	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
 	if err != nil {
-		helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+		helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error": "failed to create token",
 		})
 		return
@@ -150,14 +157,14 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		Token: tokenStr,
 	}
 
-	helpers.WriteResponse(w, http.StatusOK, resp)
+	helpers.JSONResponse(w, http.StatusOK, resp)
 }
 
 func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	var signInUser dto.SignInUser
 
 	if err := json.NewDecoder(r.Body).Decode(&signInUser); err != nil {
-		helpers.WriteResponse(w, http.StatusBadRequest, map[string]string{
+		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "invalid input",
 		})
 		return
@@ -165,30 +172,30 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := validate.Struct(signInUser); err != nil {
-		helpers.WriteResponse(w, http.StatusBadRequest, map[string]string{
+		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "validation failed",
 		})
 		return
 	}
 
-	user, err := a.UserSet.ValidateUser(signInUser.Login, signInUser.Password)
+	user, err := a.userSet.ValidateUser(signInUser.Login, signInUser.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrUserNotExists):
-			helpers.WriteResponse(w, http.StatusUnauthorized, map[string]string{
+			helpers.JSONResponse(w, http.StatusUnauthorized, map[string]string{
 				"error": "incorrect username or password",
 			})
 		default:
-			helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+			helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 				"error": "internal server error",
 			})
 		}
 		return
 	}
 
-	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.JWTSecret)
+	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
 	if err != nil {
-		helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+		helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error": "failed to create token",
 		})
 		return
@@ -203,7 +210,7 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	helpers.WriteResponse(w, http.StatusOK, UserResponse{
+	helpers.JSONResponse(w, http.StatusOK, UserResponse{
 		ID:    user.ID.String(),
 		Login: user.Username,
 		Token: tokenStr,
@@ -227,15 +234,15 @@ func (a *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookieJWT, err := r.Cookie(CookieName)
 		if err != nil {
-			helpers.WriteResponse(w, http.StatusUnauthorized, map[string]string{
+			helpers.JSONResponse(w, http.StatusUnauthorized, map[string]string{
 				"error": "unathorized",
 			})
 			return
 		}
 
-		tokenPayload, err := jwt.ValidateToken(cookieJWT.Value, a.JWTSecret)
+		tokenPayload, err := jwt.ValidateToken(cookieJWT.Value, a.jwtSecret)
 		if err != nil {
-			helpers.WriteResponse(w, http.StatusUnauthorized, map[string]string{
+			helpers.JSONResponse(w, http.StatusUnauthorized, map[string]string{
 				"error": "invalid token",
 			})
 			return
@@ -249,7 +256,7 @@ func (a *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 func (a *AuthHandler) TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
-		helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
+		helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error": "user_id not found in context",
 		})
 		return
@@ -261,5 +268,5 @@ func (a *AuthHandler) TestProtectedEndpoint(w http.ResponseWriter, r *http.Reque
 		"time":    time.Now().Format(time.RFC3339),
 	}
 
-	helpers.WriteResponse(w, http.StatusOK, response)
+	helpers.JSONResponse(w, http.StatusOK, response)
 }
