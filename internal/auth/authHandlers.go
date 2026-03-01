@@ -1,6 +1,7 @@
 package authHandlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"wcs/internal/dto"
+	"wcs/internal/models"
 	"wcs/pkg/helpers"
 	"wcs/pkg/jwt"
 
@@ -32,14 +34,8 @@ type AuthHandler struct {
 	UserSet   *UserSet
 }
 
-type User struct {
-	ID       string
-	Login    string
-	Password string
-}
-
 type UserSet struct {
-	users map[string]*User
+	users map[string]*models.User
 	mu    sync.RWMutex
 }
 
@@ -51,12 +47,12 @@ type UserResponse struct {
 
 func NewUserSet() *UserSet {
 	return &UserSet{
-		users: make(map[string]*User),
+		users: make(map[string]*models.User),
 		mu:    sync.RWMutex{},
 	}
 }
 
-func (s *UserSet) CreateUser(login, password string) (*User, error) {
+func (s *UserSet) CreateUser(login, password string) (*models.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -69,17 +65,17 @@ func (s *UserSet) CreateUser(login, password string) (*User, error) {
 		return nil, err
 	}
 
-	user := &User{
-		ID:       uuid.New().String(),
-		Login:    login,
-		Password: string(hashPassword),
+	user := &models.User{
+		ID:       uuid.New(),
+		Username: login,
+		Password: hashPassword,
 	}
 
 	s.users[login] = user
 	return user, nil
 }
 
-func (s *UserSet) ValidateUser(login, password string) (*User, error) {
+func (s *UserSet) ValidateUser(login, password string) (*models.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -121,7 +117,7 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenStr, err := jwt.GenerateToken(user.ID, CookieTimeJWT, a.JWTSecret)
+	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.JWTSecret)
 	if err != nil {
 		helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
 			"error": "failed to create token",
@@ -140,8 +136,8 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 
 	resp := UserResponse{
-		ID:    user.ID,
-		Login: user.Login,
+		ID:    user.ID.String(),
+		Login: user.Username,
 		Token: tokenStr,
 	}
 	helpers.WriteResponse(w, http.StatusOK, resp)
@@ -173,7 +169,7 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenStr, err := jwt.GenerateToken(user.ID, CookieTimeJWT, a.JWTSecret)
+	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.JWTSecret)
 	if err != nil {
 		helpers.WriteResponse(w, http.StatusInternalServerError, map[string]string{
 			"error": "failed to create token",
@@ -191,8 +187,8 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	})
 
 	helpers.WriteResponse(w, http.StatusOK, UserResponse{
-		ID:    user.ID,
-		Login: user.Login,
+		ID:    user.ID.String(),
+		Login: user.Username,
 		Token: tokenStr,
 	})
 }
@@ -220,12 +216,14 @@ func (a *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if _, err := jwt.ValidateToken(cookieJWT.Value, a.JWTSecret); err != nil {
+		tokenPayload, err := jwt.ValidateToken(cookieJWT.Value, a.JWTSecret)
+		if err != nil {
 			helpers.WriteResponse(w, http.StatusUnauthorized, map[string]string{
 				"error": "invalid token",
 			})
 			return
 		}
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), "user_id", tokenPayload.UserID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
