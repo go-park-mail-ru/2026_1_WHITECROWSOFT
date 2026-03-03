@@ -146,6 +146,7 @@ func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		Value:    tokenStr,
 		HttpOnly: true,
 		Secure:   isSecure,
+		SameSite: http.SameSiteStrictMode,
 		Expires:  time.Now().Add(CookieTimeJWT),
 		Path:     "/",
 	}
@@ -206,6 +207,7 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		Value:    tokenStr,
 		HttpOnly: true,
 		Secure:   isSecure,
+		SameSite: http.SameSiteStrictMode,
 		Expires:  time.Now().Add(CookieTimeJWT),
 		Path:     "/",
 	})
@@ -223,6 +225,7 @@ func (a *AuthHandler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 		Value:    "",
 		HttpOnly: true,
 		Secure:   isSecure,
+		SameSite: http.SameSiteStrictMode,
 		Expires:  time.Now().Add(-CookieTimeJWT),
 		Path:     "/",
 	})
