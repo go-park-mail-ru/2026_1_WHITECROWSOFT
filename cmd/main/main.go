@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	authHandlers "wcs/internal/auth"
+	"wcs/internal/logger"
 
 	"github.com/joho/godotenv"
 )
@@ -24,7 +25,9 @@ func main() {
 		host = "127.0.0.1:8000"
 	}
 
-	authHandler := authHandlers.NewAuthHandler(os.Getenv("JWT_SECRET"),authHandlers.NewUserSet())
+	log := logger.Init()
+
+	authHandler := authHandlers.NewAuthHandler(os.Getenv("JWT_SECRET"), authHandlers.NewUserSet())
 
 	r := http.NewServeMux()
 
@@ -36,14 +39,16 @@ func main() {
 
 	r.Handle("GET /protected", authHandler.AuthMiddleware(http.HandlerFunc(authHandler.TestProtectedEndpoint)))
 
+	handler := logger.Middleware(r)
+
 	srv := &http.Server{
-		Handler: r,
+		Handler: handler,
 		Addr:    host,
 	}
 
-	slog.Info("Server started", "host", host)
+	log.Info("Server started", "host", host)
 	if err := srv.ListenAndServe(); err != nil {
-		slog.Error("Server failed", "error", err)
+		log.Error("Server failed", "error", err)
 		os.Exit(1)
 	}
 }
