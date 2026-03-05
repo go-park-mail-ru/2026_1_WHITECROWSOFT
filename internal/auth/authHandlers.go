@@ -26,6 +26,8 @@ var (
 	ErrInternal         = errors.New("internal server error")
 	ErrUnauthorized     = errors.New("unauthorized")
 	ErrMethodNotAllowed = errors.New("method not allowed")
+	ErrTokenCreation    = errors.New("failed to create token")
+	ErrBadCredentials   = errors.New("incorrect username or password")
 	validate            = validator.New()
 	isSecure            = os.Getenv("IS_SECURE") == "true"
 )
@@ -45,7 +47,6 @@ func (a *Handler) Secret() string {
 type UserResponse struct {
 	ID    string `json:"id"`
 	Login string `json:"login"`
-	Token string `json:"token"`
 }
 
 func NewHandler(secret string, users *storage.UserSet) *Handler {
@@ -86,7 +87,7 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 
 	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
 	if err != nil {
-		helpers.JSONErrorResponse(w, http.StatusInternalServerError, errors.New("failed to create token"))
+		helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrTokenCreation)
 		return
 	}
 
@@ -104,7 +105,6 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	resp := UserResponse{
 		ID:    user.ID.String(),
 		Login: user.Username,
-		Token: tokenStr,
 	}
 
 	helpers.JSONResponse(w, http.StatusOK, resp)
@@ -132,7 +132,7 @@ func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, storage.ErrUserNotExist):
-			helpers.JSONErrorResponse(w, http.StatusUnauthorized, errors.New("incorrect username or password"))
+			helpers.JSONErrorResponse(w, http.StatusUnauthorized, ErrBadCredentials)
 		default:
 			helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrInternal)
 		}
@@ -153,14 +153,13 @@ func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   isSecure,
 		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(CookieTimeJWT),
+		MaxAge:   int(CookieTimeJWT.Seconds()),
 		Path:     "/",
 	})
 
 	helpers.JSONResponse(w, http.StatusOK, UserResponse{
 		ID:    user.ID.String(),
 		Login: user.Username,
-		Token: tokenStr,
 	})
 }
 
@@ -171,7 +170,7 @@ func (a *Handler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   isSecure,
 		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(-CookieTimeJWT),
+		MaxAge:   -1,
 		Path:     "/",
 	})
 
