@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/middleware"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
 )
 
@@ -32,7 +33,7 @@ func TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func New() http.Handler {
-	authHandler := auth.NewHandler(os.Getenv("JWT_SECRET"), auth.NewUserSet())
+	authHandler := auth.NewHandler(os.Getenv("JWT_SECRET"), storage.NewUserSet())
 
 	r := http.NewServeMux()
 

@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 )
 
 func TestSignupUser(t *testing.T) {
 	authHandler := &Handler{
 		jwtSecret: "haha-secret-key-open",
-		userSet:   NewUserSet(),
+		users:     storage.NewUserSet(),
 	}
 
 	tests := []struct {
