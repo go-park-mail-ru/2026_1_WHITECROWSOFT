@@ -4,8 +4,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	authHandlers "wcs/internal/auth"
-	"wcs/internal/logger"
+
+	authHandlers "github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/logger"
 
 	"github.com/joho/godotenv"
 )

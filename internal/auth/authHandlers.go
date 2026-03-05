@@ -8,10 +8,11 @@ import (
 	"os"
 	"sync"
 	"time"
-	"wcs/internal/dto"
-	"wcs/internal/models"
-	"wcs/pkg/helpers"
-	"wcs/pkg/jwt"
+
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/dto"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/models"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
