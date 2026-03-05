@@ -1,4 +1,4 @@
-package authHandlers
+package auth
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestSignupUser(t *testing.T) {
-	authHandler := &AuthHandler{
+	authHandler := &Handler{
 		jwtSecret: "haha-secret-key-open",
 		userSet:   NewUserSet(),
 	}
