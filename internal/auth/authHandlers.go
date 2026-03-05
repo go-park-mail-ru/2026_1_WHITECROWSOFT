@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/dto"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/models"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
@@ -56,94 +57,17 @@ func NewHandler(secret string, users *storage.UserSet) *Handler {
 	}
 }
 
-func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" || r.Body == nil {
-		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+func getFromBody(r *http.Request, u any) error {
+	if err := json.NewDecoder(r.Body).Decode(u); err != nil {
+		return err
 	}
-	defer r.Body.Close()
+	return validate.Struct(u)
+}
 
-	var signUpUser dto.SignUpUser
-
-	if err := json.NewDecoder(r.Body).Decode(&signUpUser); err != nil {
-		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
-		return
-	}
-
-	if err := validate.Struct(signUpUser); err != nil {
-		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
-		return
-	}
-
-	user, err := a.users.CreateUser(signUpUser.Login, signUpUser.Password)
-	if err != nil {
-		switch {
-		case errors.Is(err, storage.ErrUserExist):
-			helpers.JSONErrorResponse(w, http.StatusConflict, storage.ErrUserExist)
-		default:
-			helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrInternal)
-		}
-		return
-	}
-
+func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.User) {
 	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
 	if err != nil {
 		helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrTokenCreation)
-		return
-	}
-
-	cookie := &http.Cookie{
-		Name:     CookieName,
-		Value:    tokenStr,
-		HttpOnly: true,
-		Secure:   isSecure,
-		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(CookieTimeJWT),
-		Path:     "/",
-	}
-	http.SetCookie(w, cookie)
-
-	resp := UserResponse{
-		ID:    user.ID.String(),
-		Login: user.Username,
-	}
-
-	helpers.JSONResponse(w, http.StatusOK, resp)
-}
-
-func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" || r.Body == nil {
-		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
-	}
-	defer r.Body.Close()
-
-	var signInUser dto.SignInUser
-
-	if err := json.NewDecoder(r.Body).Decode(&signInUser); err != nil {
-		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
-		return
-	}
-
-	if err := validate.Struct(signInUser); err != nil {
-		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
-		return
-	}
-
-	user, err := a.users.ValidateUser(signInUser.Login, signInUser.Password)
-	if err != nil {
-		switch {
-		case errors.Is(err, storage.ErrUserNotExist):
-			helpers.JSONErrorResponse(w, http.StatusUnauthorized, ErrBadCredentials)
-		default:
-			helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrInternal)
-		}
-		return
-	}
-
-	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
-	if err != nil {
-		helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
-			"error": "failed to create token",
-		})
 		return
 	}
 
@@ -161,6 +85,60 @@ func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		ID:    user.ID.String(),
 		Login: user.Username,
 	})
+}
+
+func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" || r.Body == nil {
+		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+	}
+	defer r.Body.Close()
+
+	var signUpUser dto.SignUpUser
+
+	if err := getFromBody(r, &signUpUser); err != nil {
+		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
+		return
+	}
+
+	user, err := a.users.CreateUser(signUpUser.Login, signUpUser.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, storage.ErrUserExist):
+			helpers.JSONErrorResponse(w, http.StatusConflict, storage.ErrUserExist)
+		default:
+			helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrInternal)
+		}
+		return
+	}
+
+	a.saveUserCookie(w, user)
+}
+
+func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" || r.Body == nil {
+		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+	}
+	defer r.Body.Close()
+
+	var signInUser dto.SignInUser
+
+	if err := getFromBody(r, &signInUser); err != nil {
+		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
+		return
+	}
+
+	user, err := a.users.ValidateUser(signInUser.Login, signInUser.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, storage.ErrUserNotExist):
+			helpers.JSONErrorResponse(w, http.StatusUnauthorized, ErrBadCredentials)
+		default:
+			helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrInternal)
+		}
+		return
+	}
+
+	a.saveUserCookie(w, user)
 }
 
 func (a *Handler) LogOutUser(w http.ResponseWriter, r *http.Request) {
