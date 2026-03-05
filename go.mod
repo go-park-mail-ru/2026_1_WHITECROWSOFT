@@ -3,8 +3,8 @@ module github.com/go-park-mail-ru/2026_1_WHITECROWSOFT
 go 1.25.7
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-playground/validator/v10 v10.30.1
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	golang.org/x/crypto v0.46.0
 )
