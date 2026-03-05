@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
-	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/logger"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/middleware"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
 )
@@ -45,5 +44,5 @@ func New() http.Handler {
 
 	r.Handle("GET /protected", middleware.Auth(http.HandlerFunc(TestProtectedEndpoint), authHandler))
 
-	return logger.Middleware(r)
+	return middleware.Logger(r)
 }
