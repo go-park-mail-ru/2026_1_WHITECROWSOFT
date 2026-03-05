@@ -24,14 +24,15 @@ const (
 )
 
 var (
-	ErrUserExist    = errors.New("user already exists")
-	ErrUserNotExist = errors.New("user not found")
-	ErrInvalidInput = errors.New("invalid input")
-	ErrInvalidToken = errors.New("invalid token")
-	ErrInternal     = errors.New("internal server error")
-	ErrUnauthorized = errors.New("unauthorized")
-	validate        = validator.New()
-	isSecure        = os.Getenv("IS_SECURE") == "true"
+	ErrUserExist        = errors.New("user already exists")
+	ErrUserNotExist     = errors.New("user not found")
+	ErrInvalidInput     = errors.New("invalid input")
+	ErrInvalidToken     = errors.New("invalid token")
+	ErrInternal         = errors.New("internal server error")
+	ErrUnauthorized     = errors.New("unauthorized")
+	ErrMethodNotAllowed = errors.New("method not allowed")
+	validate            = validator.New()
+	isSecure            = os.Getenv("IS_SECURE") == "true"
 )
 
 type Handler struct {
@@ -112,13 +113,17 @@ func (s *UserSet) ValidateUser(login, password string) (*models.User, error) {
 }
 
 func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" || r.Body == nil {
+		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+	}
+	defer r.Body.Close()
+
 	var signUpUser dto.SignUpUser
 
 	if err := json.NewDecoder(r.Body).Decode(&signUpUser); err != nil {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
 		return
 	}
-	defer r.Body.Close()
 
 	if err := validate.Struct(signUpUser); err != nil {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
@@ -163,13 +168,17 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" || r.Body == nil {
+		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+	}
+	defer r.Body.Close()
+
 	var signInUser dto.SignInUser
 
 	if err := json.NewDecoder(r.Body).Decode(&signInUser); err != nil {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
 		return
 	}
-	defer r.Body.Close()
 
 	if err := validate.Struct(signInUser); err != nil {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
