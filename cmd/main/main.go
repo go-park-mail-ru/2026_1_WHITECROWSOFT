@@ -1,14 +1,11 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
 	"os"
 
 	authHandlers "github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/logger"
-
-	"github.com/joho/godotenv"
 )
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -16,14 +13,9 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		slog.Warn("No .env file found, using system env")
-	}
-
 	host := os.Getenv("SERVER_HOST")
 	if host == "" {
-		host = "127.0.0.1:8000"
+		host = ":8000"
 	}
 
 	log := logger.Init()
