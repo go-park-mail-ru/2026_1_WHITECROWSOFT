@@ -23,11 +23,9 @@ const (
 
 var (
 	ErrInvalidInput     = errors.New("invalid input")
-	ErrInvalidToken     = errors.New("invalid token")
 	ErrInternal         = errors.New("internal server error")
 	ErrUnauthorized     = errors.New("unauthorized")
 	ErrMethodNotAllowed = errors.New("method not allowed")
-	ErrTokenCreation    = errors.New("failed to create token")
 	ErrBadCredentials   = errors.New("incorrect username or password")
 	validate            = validator.New()
 	isSecure            = os.Getenv("IS_SECURE") == "true"
@@ -57,7 +55,7 @@ func NewHandler(secret string, users *storage.UserSet) *Handler {
 	}
 }
 
-func getFromBody(r *http.Request, u any) error {
+func getFromBody[T dto.SignInUser | dto.SignUpUser](r *http.Request, u *T) error {
 	if err := json.NewDecoder(r.Body).Decode(u); err != nil {
 		return err
 	}
@@ -67,7 +65,7 @@ func getFromBody(r *http.Request, u any) error {
 func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.User) {
 	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
 	if err != nil {
-		helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrTokenCreation)
+		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrTokenCreation)
 		return
 	}
 

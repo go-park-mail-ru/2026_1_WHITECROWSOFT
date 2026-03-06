@@ -1,7 +1,6 @@
 package router
 
 import (
-	"errors"
 	"net/http"
 	"os"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/middleware"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
 )
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +19,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 func TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
-		helpers.JSONErrorResponse(w, http.StatusInternalServerError, errors.New("user_id not found in context"))
+		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrNoUserID)
 		return
 	}
 

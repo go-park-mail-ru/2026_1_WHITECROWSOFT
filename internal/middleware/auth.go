@@ -19,7 +19,7 @@ func Auth(next http.Handler, a *auth.Handler) http.Handler {
 
 		tokenPayload, err := jwt.ValidateToken(cookieJWT.Value, a.Secret())
 		if err != nil {
-			helpers.JSONErrorResponse(w, http.StatusUnauthorized, auth.ErrInvalidToken)
+			helpers.JSONErrorResponse(w, http.StatusUnauthorized, jwt.ErrInvalidToken)
 			return
 		}
 
