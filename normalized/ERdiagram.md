@@ -1,41 +1,43 @@
 ```mermaid
 erDiagram
     user {
-        id PK
-        username UK
-        password
-        token_version
-        created_at
-        updated_at
+        uuid id PK
+        text username UK
+        text password
+        int token_version
+        timestamptz created_at
+        timestamptz updated_at
     }
+    
     note {
-        id PK
-        user_id FK
-        title
-        parent_id FK
-        created_at
-        updated_at
+        uuid id PK
+        uuid user_id FK
+        text title
+        uuid parent_id FK
+        timestamptz created_at
+        timestamptz updated_at
     }
+    
     block {
-        id PK
-        note_id FK
-        position
-        block_type_id FK
-        created_at
-        updated_at
+        uuid id PK
+        uuid note_id FK
+        integer position
+        int block_type_id FK
+        timestamptz created_at
+        timestamptz updated_at
     }
 
     block_type {
-        id PK
-        name UK
+        int id PK
+        text name UK
     }
 
     block_state {
-        id PK
-        block_id FK
-        formatting
-        created_at
-        updated_at
+        uuid id PK
+        uuid block_id FK
+        text formatting
+        timestamptz created_at
+        timestamptz updated_at
     }
 
     user ||--o{ note : "creates"
