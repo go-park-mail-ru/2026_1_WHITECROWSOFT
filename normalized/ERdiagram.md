@@ -1,6 +1,6 @@
 ```mermaid
 erDiagram
-    user {
+    account {
         uuid id PK
         text username UK
         text password
@@ -23,6 +23,7 @@ erDiagram
         uuid note_id FK
         integer position
         int block_type_id FK
+        text content
         timestamptz created_at
         timestamptz updated_at
     }
