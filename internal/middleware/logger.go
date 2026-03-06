@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/logger"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -30,7 +30,7 @@ func Logger(next http.Handler) http.Handler {
 
 		requestID := generateRequestID()
 
-		ctx := context.WithValue(r.Context(), logger.RequestIDKey, requestID)
+		ctx := context.WithValue(r.Context(), types.RequestIDKey, requestID)
 		r = r.WithContext(ctx)
 
 		slog.InfoContext(ctx, "request started",

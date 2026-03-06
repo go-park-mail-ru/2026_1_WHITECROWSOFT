@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/types"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
 )
@@ -23,7 +24,7 @@ func Auth(next http.Handler, a *auth.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "user_id", tokenPayload.UserID)
+		ctx := context.WithValue(r.Context(), types.UserIDKey, tokenPayload.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

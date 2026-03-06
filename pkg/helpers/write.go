@@ -17,7 +17,7 @@ func JSONResponse(w http.ResponseWriter, status int, data any) {
 }
 
 func JSONErrorResponse(w http.ResponseWriter, status int, err error) {
-	JSONResponse(w, http.StatusInternalServerError, map[string]string{
+	JSONResponse(w, status, map[string]string{
 		"error": err.Error(),
 	})
 }

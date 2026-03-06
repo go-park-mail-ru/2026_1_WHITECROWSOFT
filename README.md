@@ -22,3 +22,12 @@
 
 ```bash
 cp .env.example .env
+```
+
+### Запуск приложения
+
+Для запуска приложения через Docker используйте команду:
+
+```bash
+docker-compose up -d --build
+```

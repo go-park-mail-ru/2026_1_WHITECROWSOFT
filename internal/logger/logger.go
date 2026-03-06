@@ -5,12 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-)
 
-type ctxKey string
-
-const (
-	RequestIDKey ctxKey = "request_id"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/types"
 )
 
 type HTTPError struct {
@@ -52,7 +48,7 @@ func Init() *slog.Logger {
 }
 
 func WithRequest(ctx context.Context, args ...any) (*slog.Logger, []any) {
-	if requestID, ok := ctx.Value(RequestIDKey).(string); ok {
+	if requestID, ok := ctx.Value(types.RequestIDKey).(string); ok {
 		args = append(args, "request_id", requestID)
 	}
 	return slog.Default(), args

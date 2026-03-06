@@ -8,6 +8,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/middleware"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/types"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
 )
@@ -17,7 +18,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(types.UserIDKey).(string)
 	if !ok {
 		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrNoUserID)
 		return
