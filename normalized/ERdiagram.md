@@ -41,7 +41,7 @@ erDiagram
         timestamptz updated_at
     }
 
-    user ||--o{ note : "creates"
+    account ||--o{ note : "creates"
     note ||--o{ note : "has subnotes"
     note ||--o{ block : "contains"
     block }o--|| block_type : "is of type"
