@@ -15,3 +15,9 @@ func JSONResponse(w http.ResponseWriter, status int, data any) {
 		os.Exit(1)
 	}
 }
+
+func JSONErrorResponse(w http.ResponseWriter, status int, err error) {
+	JSONResponse(w, status, map[string]string{
+		"error": err.Error(),
+	})
+}

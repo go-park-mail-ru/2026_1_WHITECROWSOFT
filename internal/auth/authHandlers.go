@@ -1,21 +1,19 @@
-package authHandlers
+package auth
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
-	"sync"
 	"time"
-	"wcs/internal/dto"
-	"wcs/internal/models"
-	"wcs/pkg/helpers"
-	"wcs/pkg/jwt"
+
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/dto"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/models"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -24,181 +22,50 @@ const (
 )
 
 var (
-	ErrUserExists    = errors.New("user already exists")
-	ErrUserNotExists = errors.New("user not found")
-	validate         = validator.New()
-	isSecure         = os.Getenv("IS_SECURE") == "true"
+	ErrInvalidInput     = errors.New("invalid input")
+	ErrInternal         = errors.New("internal server error")
+	ErrUnauthorized     = errors.New("unauthorized")
+	ErrMethodNotAllowed = errors.New("method not allowed")
+	ErrBadCredentials   = errors.New("incorrect username or password")
+	validate            = validator.New()
+	isSecure            = os.Getenv("IS_SECURE") == "true"
 )
 
-type AuthHandler struct {
+type Handler struct {
 	jwtSecret string
-	userSet   *UserSet
+	users     *storage.UserSet
 }
 
-type UserSet struct {
-	users map[string]*models.User
-	mu    sync.RWMutex
+func (a *Handler) Secret() string {
+	// NOTE: I added this method to get middleware.Auth working,
+	// even though I proposed making jwtSecret private
+	// in the first placee. How do we get around this? -Andrew
+	return a.jwtSecret
 }
 
 type UserResponse struct {
 	ID    string `json:"id"`
 	Login string `json:"login"`
-	Token string `json:"token"`
 }
 
-func NewAuthHandler(secret string, users *UserSet) *AuthHandler {
-	return &AuthHandler{
+func NewHandler(secret string, users *storage.UserSet) *Handler {
+	return &Handler{
 		jwtSecret: secret,
-		userSet:   users,
+		users:     users,
 	}
 }
 
-func NewUserSet() *UserSet {
-	return &UserSet{
-		users: make(map[string]*models.User),
-		mu:    sync.RWMutex{},
+func getFromBody[T dto.SignInUser | dto.SignUpUser](r *http.Request, u *T) error {
+	if err := json.NewDecoder(r.Body).Decode(u); err != nil {
+		return err
 	}
+	return validate.Struct(u)
 }
 
-func (s *UserSet) CreateUser(login, password string) (*models.User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, exists := s.users[login]; exists {
-		return nil, ErrUserExists
-	}
-
-	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-
-	user := &models.User{
-		ID:       uuid.New(),
-		Username: login,
-		Password: hashPassword,
-	}
-
-	s.users[login] = user
-	return user, nil
-}
-
-func (s *UserSet) ValidateUser(login, password string) (*models.User, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	user, exists := s.users[login]
-	if !exists {
-		return nil, ErrUserNotExists
-	}
-
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		return nil, ErrUserNotExists
-	}
-
-	return user, nil
-}
-
-func (a *AuthHandler) SignupUser(w http.ResponseWriter, r *http.Request) {
-	var signUpUser dto.SignUpUser
-
-	if err := json.NewDecoder(r.Body).Decode(&signUpUser); err != nil {
-		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
-			"error": "invalid input",
-		})
-		return
-	}
-	defer r.Body.Close()
-
-	if err := validate.Struct(signUpUser); err != nil {
-		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
-			"error": "validation failed",
-		})
-		return
-	}
-
-	user, err := a.userSet.CreateUser(signUpUser.Login, signUpUser.Password)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrUserExists):
-			helpers.JSONResponse(w, http.StatusConflict, map[string]string{
-				"error": "user already exists",
-			})
-		default:
-			helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
-				"error": "internal server error",
-			})
-		}
-		return
-	}
-
+func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.User) {
 	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
 	if err != nil {
-		helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
-			"error": "failed to create token",
-		})
-		return
-	}
-
-	cookie := &http.Cookie{
-		Name:     CookieName,
-		Value:    tokenStr,
-		HttpOnly: true,
-		Secure:   isSecure,
-		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(CookieTimeJWT),
-		Path:     "/",
-	}
-	http.SetCookie(w, cookie)
-
-	resp := UserResponse{
-		ID:    user.ID.String(),
-		Login: user.Username,
-		Token: tokenStr,
-	}
-
-	helpers.JSONResponse(w, http.StatusOK, resp)
-}
-
-func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
-	var signInUser dto.SignInUser
-
-	if err := json.NewDecoder(r.Body).Decode(&signInUser); err != nil {
-		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
-			"error": "invalid input",
-		})
-		return
-	}
-	defer r.Body.Close()
-
-	if err := validate.Struct(signInUser); err != nil {
-		helpers.JSONResponse(w, http.StatusBadRequest, map[string]string{
-			"error": "validation failed",
-		})
-		return
-	}
-
-	user, err := a.userSet.ValidateUser(signInUser.Login, signInUser.Password)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrUserNotExists):
-			helpers.JSONResponse(w, http.StatusUnauthorized, map[string]string{
-				"error": "incorrect username or password",
-			})
-		default:
-			helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
-				"error": "internal server error",
-			})
-		}
-		return
-	}
-
-	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
-	if err != nil {
-		helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
-			"error": "failed to create token",
-		})
+		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrTokenCreation)
 		return
 	}
 
@@ -208,68 +75,80 @@ func (a *AuthHandler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   isSecure,
 		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(CookieTimeJWT),
+		MaxAge:   int(CookieTimeJWT.Seconds()),
 		Path:     "/",
 	})
 
 	helpers.JSONResponse(w, http.StatusOK, UserResponse{
 		ID:    user.ID.String(),
 		Login: user.Username,
-		Token: tokenStr,
 	})
 }
 
-func (a *AuthHandler) LogOutUser(w http.ResponseWriter, r *http.Request) {
+func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" || r.Body == nil {
+		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+	}
+	defer r.Body.Close()
+
+	var signUpUser dto.SignUpUser
+
+	if err := getFromBody(r, &signUpUser); err != nil {
+		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
+		return
+	}
+
+	user, err := a.users.CreateUser(signUpUser.Login, signUpUser.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, storage.ErrUserExist):
+			helpers.JSONErrorResponse(w, http.StatusConflict, storage.ErrUserExist)
+		default:
+			helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrInternal)
+		}
+		return
+	}
+
+	a.saveUserCookie(w, user)
+}
+
+func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" || r.Body == nil {
+		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+	}
+	defer r.Body.Close()
+
+	var signInUser dto.SignInUser
+
+	if err := getFromBody(r, &signInUser); err != nil {
+		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
+		return
+	}
+
+	user, err := a.users.ValidateUser(signInUser.Login, signInUser.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, storage.ErrUserNotExist):
+			helpers.JSONErrorResponse(w, http.StatusUnauthorized, ErrBadCredentials)
+		default:
+			helpers.JSONErrorResponse(w, http.StatusInternalServerError, ErrInternal)
+		}
+		return
+	}
+
+	a.saveUserCookie(w, user)
+}
+
+func (a *Handler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
 		Value:    "",
 		HttpOnly: true,
 		Secure:   isSecure,
 		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(-CookieTimeJWT),
+		MaxAge:   -1,
 		Path:     "/",
 	})
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func (a *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookieJWT, err := r.Cookie(CookieName)
-		if err != nil {
-			helpers.JSONResponse(w, http.StatusUnauthorized, map[string]string{
-				"error": "unathorized",
-			})
-			return
-		}
-
-		tokenPayload, err := jwt.ValidateToken(cookieJWT.Value, a.jwtSecret)
-		if err != nil {
-			helpers.JSONResponse(w, http.StatusUnauthorized, map[string]string{
-				"error": "invalid token",
-			})
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), "user_id", tokenPayload.UserID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func (a *AuthHandler) TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("user_id").(string)
-	if !ok {
-		helpers.JSONResponse(w, http.StatusInternalServerError, map[string]string{
-			"error": "user_id not found in context",
-		})
-		return
-	}
-
-	response := map[string]string{
-		"msg":     "This is a protected endpoint",
-		"user_id": userID,
-		"time":    time.Now().Format(time.RFC3339),
-	}
-
-	helpers.JSONResponse(w, http.StatusOK, response)
 }

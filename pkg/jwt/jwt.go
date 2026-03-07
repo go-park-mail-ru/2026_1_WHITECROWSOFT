@@ -4,7 +4,14 @@ import (
 	"errors"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+var (
+	ErrInvalidToken  = errors.New("invalid token")
+	ErrTokenCreation = errors.New("failed to create token")
+	ErrNoUserID      = errors.New("user_id not found")
+	ErrBadAlgorithm  = errors.New("invalid algorithm")
 )
 
 type TokenPayload struct {
@@ -23,7 +30,7 @@ func ValidateToken(tokenStr string, secretKey string) (*TokenPayload, error) {
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("invalid algorithm")
+			return nil, ErrBadAlgorithm
 		}
 		return []byte(secretKey), nil
 	})
@@ -31,12 +38,12 @@ func ValidateToken(tokenStr string, secretKey string) (*TokenPayload, error) {
 		return nil, err
 	}
 	if !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 
 	uid, ok := claims["user_id"].(string)
 	if !ok {
-		return &TokenPayload{}, errors.New("user_id not found")
+		return &TokenPayload{}, ErrNoUserID
 	}
 	return &TokenPayload{UserID: uid}, nil
 }
