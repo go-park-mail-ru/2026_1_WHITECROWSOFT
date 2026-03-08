@@ -88,6 +88,7 @@ func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.User) {
 func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" || r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+		return
 	}
 	defer r.Body.Close()
 
@@ -115,6 +116,7 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" || r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+		return
 	}
 	defer r.Body.Close()
 
