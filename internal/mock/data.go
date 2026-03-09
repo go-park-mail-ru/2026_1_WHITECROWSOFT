@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"encoding/json"
 	"strconv"
 	"time"
 
@@ -10,8 +9,11 @@ import (
 )
 
 type MockData struct {
-	Notes  []models.Note
-	Blocks []models.Block
+	Notes       []models.Note
+	Accounts    []models.Account
+	Blocks      []models.Block
+	BlockTypes  []models.BlockType
+	BlockStates []models.BlockState
 }
 
 func NewMockData() *MockData {
@@ -21,43 +23,78 @@ func NewMockData() *MockData {
 }
 
 func (m *MockData) init() {
+	now := time.Now()
+
 	userID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	m.Accounts = append(m.Accounts, models.Account{
+		ID:           userID,
+		Username:     "testuser",
+		Password:     []byte("hashed_password"),
+		TokenVersion: 1,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	})
+
+	m.BlockTypes = []models.BlockType{
+		{ID: 1, Name: "text"},
+		{ID: 2, Name: "image"},
+		{ID: 3, Name: "code"},
+		{ID: 4, Name: "quote"},
+	}
 
 	for i := 1; i <= 5; i++ {
 		noteID := uuid.New()
 
-		blockID := uuid.New()
-		state := map[string]interface{}{
-			"text":  "Это пример текста для заметки",
-			"title": "Заголовок mock",
-			"content": []string{
-				"Первый параграф",
-				"Второй параграф",
-				"Третий параграф",
-			},
-			"format":  "text",
-			"tags":    []string{"пример", "тест", "мок"},
-			"created": time.Now().AddDate(0, -i, 0).Format(time.RFC3339),
-			"updated": time.Now().Format(time.RFC3339),
+		note := models.Note{
+			ID:        noteID,
+			UserID:    userID,
+			Title:     "Моя заметка " + strconv.Itoa(i),
+			ParentID:  nil,
+			CreatedAt: now.AddDate(0, -i, 0),
+			UpdatedAt: now,
 		}
+		m.Notes = append(m.Notes, note)
 
-		stateJSON, _ := json.Marshal(state)
-
+		blockID := uuid.New()
 		block := models.Block{
-			ID:     blockID,
-			NoteID: noteID,
-			Type:   "text",
-			State:  stateJSON,
+			ID:          blockID,
+			NoteID:      noteID,
+			BlockTypeID: 1,
+			Position:    0,
+			Content:     "Пример\n\nПервый параграф текста\nВторой параграф\nТретий параграф",
+			CreatedAt:   now.AddDate(0, -i, 0),
+			UpdatedAt:   now,
 		}
 		m.Blocks = append(m.Blocks, block)
 
-		note := models.Note{
-			ID:       noteID,
-			UserID:   userID,
-			Title:    "Моя заметка" + strconv.Itoa(i),
-			ParentID: nil,
-			Blocks:   []uuid.UUID{blockID},
+		stateID := uuid.New()
+		state := models.BlockState{
+			ID:         stateID,
+			BlockID:    blockID,
+			Formatting: `{"format":"text","tags":["пример","тест","мок"]}`,
+			CreatedAt:  now.AddDate(0, -i, 0),
+			UpdatedAt:  now,
 		}
-		m.Notes = append(m.Notes, note)
+		m.BlockStates = append(m.BlockStates, state)
 	}
+}
+
+func (m *MockData) GetBlocksByNoteID(noteID uuid.UUID) []models.Block {
+	var blocks []models.Block
+	for _, block := range m.Blocks {
+		if block.NoteID == noteID {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks
+}
+
+func (m *MockData) GetBlockStatesByBlockID(blockID uuid.UUID) []models.BlockState {
+	var states []models.BlockState
+	for _, state := range m.BlockStates {
+		if state.BlockID == blockID {
+			states = append(states, state)
+		}
+	}
+	return states
 }

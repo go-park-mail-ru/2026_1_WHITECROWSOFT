@@ -20,19 +20,6 @@ var (
 	ErrInvalidPath    = errors.New("invalid path")
 )
 
-const (
-	notesKey   = "notes"
-	totalKey   = "total"
-	noteKey    = "note"
-	blocksKey  = "blocks"
-	noteIDKey  = "note_id"
-
-	blocksPath = "blocks"
-	
-	minNotePathLength = 3
-	minBlocksPathLength = 4
-)
-
 type NoteHandler struct {
 	mockData *mock.MockData
 }
@@ -68,8 +55,8 @@ func (h *NoteHandler) GetAllNotes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		notesKey: userNotes,
-		totalKey: len(userNotes),
+		"notes": userNotes,
+		"total": len(userNotes),
 	}
 
 	helpers.JSONResponse(w, http.StatusOK, response)
@@ -77,7 +64,7 @@ func (h *NoteHandler) GetAllNotes(w http.ResponseWriter, r *http.Request) {
 
 func (h *NoteHandler) GetNote(w http.ResponseWriter, r *http.Request) {
 	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < minNotePathLength {
+	if len(pathParts) < 3 {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrNoteIDRequired)
 		return
 	}
@@ -102,64 +89,26 @@ func (h *NoteHandler) GetNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var noteBlocks []models.Block
-	for _, blockID := range foundNote.Blocks {
-		for _, block := range h.mockData.Blocks {
-			if block.ID == blockID {
-				noteBlocks = append(noteBlocks, block)
-				break
-			}
+	blocks := h.mockData.GetBlocksByNoteID(foundNote.ID)
+	
+	blocksWithStates := make([]map[string]interface{}, 0, len(blocks))
+	for _, block := range blocks {
+		states := h.mockData.GetBlockStatesByBlockID(block.ID)
+		
+		blockData := map[string]interface{}{
+			"id":       block.ID,
+			"note_id":  block.NoteID,
+			"type_id":  block.BlockTypeID,
+			"position": block.Position,
+			"content":  block.Content,
+			"states":   states,
 		}
+		blocksWithStates = append(blocksWithStates, blockData)
 	}
 
 	response := map[string]interface{}{
-		noteKey:   foundNote,
-		blocksKey: noteBlocks,
-	}
-
-	helpers.JSONResponse(w, http.StatusOK, response)
-}
-
-func (h *NoteHandler) GetNoteBlocks(w http.ResponseWriter, r *http.Request) {
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < minBlocksPathLength || pathParts[3] != blocksPath {
-		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidPath)
-		return
-	}
-
-	noteIDStr := pathParts[2]
-	noteID, err := uuid.Parse(noteIDStr)
-	if err != nil {
-		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidNoteID)
-		return
-	}
-
-	var foundNote *models.Note
-	for _, note := range h.mockData.Notes {
-		if note.ID == noteID {
-			foundNote = &note
-			break
-		}
-	}
-
-	if foundNote == nil {
-		helpers.JSONErrorResponse(w, http.StatusNotFound, ErrNoteNotFound)
-		return
-	}
-
-	var noteBlocks []models.Block
-	for _, blockID := range foundNote.Blocks {
-		for _, block := range h.mockData.Blocks {
-			if block.ID == blockID {
-				noteBlocks = append(noteBlocks, block)
-				break
-			}
-		}
-	}
-
-	response := map[string]interface{}{
-		blocksKey:  noteBlocks,
-		noteIDKey: foundNote.ID,
+		"note":   foundNote,
+		"blocks": blocksWithStates,
 	}
 
 	helpers.JSONResponse(w, http.StatusOK, response)
