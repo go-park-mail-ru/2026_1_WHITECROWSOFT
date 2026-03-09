@@ -15,18 +15,18 @@ var (
 )
 
 type UserSet struct {
-	users map[string]*models.User
+	users map[string]*models.Account
 	mu    sync.RWMutex
 }
 
 func NewUserSet() *UserSet {
 	return &UserSet{
-		users: make(map[string]*models.User),
+		users: make(map[string]*models.Account),
 		mu:    sync.RWMutex{},
 	}
 }
 
-func (s *UserSet) CreateUser(login, password string) (*models.User, error) {
+func (s *UserSet) CreateUser(login, password string) (*models.Account, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -39,7 +39,7 @@ func (s *UserSet) CreateUser(login, password string) (*models.User, error) {
 		return nil, err
 	}
 
-	user := &models.User{
+	user := &models.Account{
 		ID:       uuid.New(),
 		Username: login,
 		Password: hashPassword,
@@ -49,7 +49,7 @@ func (s *UserSet) CreateUser(login, password string) (*models.User, error) {
 	return user, nil
 }
 
-func (s *UserSet) ValidateUser(login, password string) (*models.User, error) {
+func (s *UserSet) ValidateUser(login, password string) (*models.Account, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

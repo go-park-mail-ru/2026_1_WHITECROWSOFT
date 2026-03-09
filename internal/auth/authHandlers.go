@@ -33,8 +33,8 @@ var (
 )
 
 type UserRepository interface {
-	CreateUser(login, password string) (*models.User, error)
-	ValidateUser(login, password string) (*models.User, error)
+	CreateUser(login, password string) (*models.Account, error)
+	ValidateUser(login, password string) (*models.Account, error)
 }
 
 type Handler struct {
@@ -61,7 +61,7 @@ func getFromBody[T dto.SignInUser | dto.SignUpUser](r *http.Request, u *T) error
 	return validate.Struct(u)
 }
 
-func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.User) {
+func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.Account) {
 	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtConfig.Secret)
 	if err != nil {
 		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrTokenCreation)
