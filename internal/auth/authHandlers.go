@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/config"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/dto"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/models"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
@@ -31,16 +32,14 @@ var (
 	isSecure            = os.Getenv("IS_SECURE") == "true"
 )
 
-type Handler struct {
-	jwtSecret string
-	users     *storage.UserSet
+type UserRepository interface {
+	CreateUser(login, password string) (*models.User, error)
+	ValidateUser(login, password string) (*models.User, error)
 }
 
-func (a *Handler) Secret() string {
-	// NOTE: I added this method to get middleware.Auth working,
-	// even though I proposed making jwtSecret private
-	// in the first placee. How do we get around this? -Andrew
-	return a.jwtSecret
+type Handler struct {
+	jwtConfig config.JWTConfig
+	users     UserRepository
 }
 
 type UserResponse struct {
@@ -48,9 +47,9 @@ type UserResponse struct {
 	Login string `json:"login"`
 }
 
-func NewHandler(secret string, users *storage.UserSet) *Handler {
+func NewHandler(jwtConfig config.JWTConfig, users UserRepository) *Handler {
 	return &Handler{
-		jwtSecret: secret,
+		jwtConfig: jwtConfig,
 		users:     users,
 	}
 }
@@ -63,7 +62,7 @@ func getFromBody[T dto.SignInUser | dto.SignUpUser](r *http.Request, u *T) error
 }
 
 func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.User) {
-	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtSecret)
+	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtConfig.Secret)
 	if err != nil {
 		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrTokenCreation)
 		return
@@ -86,7 +85,7 @@ func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.User) {
 }
 
 func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" || r.Body == nil {
+	if r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
 	}
 	defer r.Body.Close()
@@ -113,7 +112,7 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" || r.Body == nil {
+	if r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
 	}
 	defer r.Body.Close()
