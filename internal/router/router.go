@@ -2,10 +2,10 @@ package router
 
 import (
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/config"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/middleware"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/types"
@@ -33,8 +33,8 @@ func TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 	helpers.JSONResponse(w, http.StatusOK, response)
 }
 
-func New() http.Handler {
-	authHandler := auth.NewHandler(os.Getenv("JWT_SECRET"), storage.NewUserSet())
+func New(cfg *config.Config) http.Handler {
+	authHandler := auth.NewHandler(cfg.JWT, storage.NewUserSet())
 
 	r := http.NewServeMux()
 
@@ -44,7 +44,7 @@ func New() http.Handler {
 	r.HandleFunc("POST /signin", authHandler.SigninUser)
 	r.HandleFunc("POST /logout", authHandler.LogOutUser)
 
-	r.Handle("GET /protected", middleware.Auth(http.HandlerFunc(TestProtectedEndpoint), authHandler))
+	r.Handle("GET /protected", middleware.Auth(http.HandlerFunc(TestProtectedEndpoint), cfg.JWT))
 
 	return middleware.Logger(r)
 }

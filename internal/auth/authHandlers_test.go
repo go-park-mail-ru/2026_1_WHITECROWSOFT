@@ -7,14 +7,21 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/config"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 )
 
-func TestSignupUser(t *testing.T) {
-	authHandler := &Handler{
-		jwtSecret: "haha-secret-key-open",
-		users:     storage.NewUserSet(),
+func setupTestHandler() *Handler {
+	jwtConfig := config.JWTConfig{
+		Secret: "test-secret-key-for-testing-only",
+		Secure: false,
 	}
+
+	return NewHandler(jwtConfig, storage.NewUserSet())
+}
+
+func TestSignupUser(t *testing.T) {
+	authHandler := setupTestHandler()
 
 	tests := []struct {
 		name           string

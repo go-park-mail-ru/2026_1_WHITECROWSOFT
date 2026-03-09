@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/config"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/logger"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/router"
 )
@@ -15,14 +17,12 @@ import (
 func main() {
 	log := logger.Init()
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8000"
-	}
-	addr := ":" + port
+	cfg := config.Load()
+
+	addr := ":" + cfg.Server.Port
 
 	srv := &http.Server{
-		Handler: router.New(),
+		Handler: router.New(cfg),
 		Addr:    addr,
 	}
 
@@ -40,7 +40,14 @@ func main() {
 	<-stop
 	log.Info("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	strContextTime := os.Getenv("CONTEXT_TIME")
+	contextTime, err := strconv.Atoi(strContextTime)
+	if err != nil {
+		log.Warn("Context time was not found, use default context time - 5 seconds")
+		contextTime = 5
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(contextTime)*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
