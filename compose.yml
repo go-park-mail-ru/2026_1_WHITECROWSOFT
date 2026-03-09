@@ -1,8 +1,0 @@
-services:
-  noterian:
-    build: .
-    image: noterian
-    restart: unless-stopped
-    env_file: ".env"
-    ports:
-      - "${PORT}:${PORT}"
