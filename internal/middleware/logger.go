@@ -11,7 +11,7 @@ import (
 )
 
 func generateRequestID() string {
-	return uuid.New().String()
+	return uuid.NewString()
 }
 
 type responseWriter struct {

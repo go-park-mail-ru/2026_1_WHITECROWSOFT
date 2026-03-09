@@ -12,6 +12,7 @@ var (
 	ErrTokenCreation = errors.New("failed to create token")
 	ErrNoUserID      = errors.New("user_id not found")
 	ErrBadAlgorithm  = errors.New("invalid algorithm")
+	ErrTokenExpired  = errors.New("token has expired")
 )
 
 type TokenPayload struct {
@@ -37,8 +38,18 @@ func ValidateToken(tokenStr string, secretKey string) (*TokenPayload, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if !token.Valid {
 		return nil, ErrInvalidToken
+	}
+
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return nil, ErrInvalidToken
+	}
+
+	if float64(time.Now().Unix()) > exp {
+		return nil, ErrTokenExpired
 	}
 
 	uid, ok := claims["user_id"].(string)
