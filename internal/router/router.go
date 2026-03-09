@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/auth"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/handlers"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/middleware"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/mock"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/types"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/helpers"
@@ -35,6 +37,8 @@ func TestProtectedEndpoint(w http.ResponseWriter, r *http.Request) {
 
 func New() http.Handler {
 	authHandler := auth.NewHandler(os.Getenv("JWT_SECRET"), storage.NewUserSet())
+	mockData := mock.NewMockData()
+	noteHandler := handlers.NewNoteHandler(mockData)
 
 	r := http.NewServeMux()
 
@@ -45,6 +49,10 @@ func New() http.Handler {
 	r.HandleFunc("POST /logout", authHandler.LogOutUser)
 
 	r.Handle("GET /protected", middleware.Auth(http.HandlerFunc(TestProtectedEndpoint), authHandler))
+
+	r.Handle("GET /notes", middleware.Auth(http.HandlerFunc(noteHandler.GetAllNotes), authHandler))
+	r.Handle("GET /notes/{id}", middleware.Auth(http.HandlerFunc(noteHandler.GetNote), authHandler))
+	r.Handle("GET /notes/{id}/blocks", middleware.Auth(http.HandlerFunc(noteHandler.GetNoteBlocks), authHandler))
 
 	return middleware.Logger(r)
 }
