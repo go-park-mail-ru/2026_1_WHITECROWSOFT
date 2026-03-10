@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/models"
@@ -47,7 +46,7 @@ func (m *MockData) init() {
 	note := models.Note{
 		ID:        noteID,
 		UserID:    userID,
-		Title:     "Моя заметка 1",
+		Title:     "The Forgotten City",
 		ParentID:  nil,
 		CreatedAt: now.AddDate(0, -1, 0),
 		UpdatedAt: now,
@@ -103,7 +102,7 @@ func (m *MockData) init() {
 	note = models.Note{
 		ID:        noteID,
 		UserID:    userID,
-		Title:     "Моя заметка " + strconv.Itoa(2),
+		Title:     "Our goals",
 		ParentID:  nil,
 		CreatedAt: now.AddDate(0, -2, 0),
 		UpdatedAt: now,
@@ -159,7 +158,7 @@ func (m *MockData) init() {
 	note = models.Note{
 		ID:        noteID,
 		UserID:    userID,
-		Title:     "Моя заметка " + strconv.Itoa(3),
+		Title:     "Eagle's history",
 		ParentID:  nil,
 		CreatedAt: now.AddDate(0, -3, 0),
 		UpdatedAt: now,
@@ -215,7 +214,7 @@ func (m *MockData) init() {
 	note = models.Note{
 		ID:        noteID,
 		UserID:    userID,
-		Title:     "Моя заметка " + strconv.Itoa(4),
+		Title:     "Metro and all about it",
 		ParentID:  nil,
 		CreatedAt: now.AddDate(0, -4, 0),
 		UpdatedAt: now,
@@ -271,7 +270,7 @@ func (m *MockData) init() {
 	note = models.Note{
 		ID:        noteID,
 		UserID:    userID,
-		Title:     "Моя заметка " + strconv.Itoa(5),
+		Title:     "Shopping",
 		ParentID:  nil,
 		CreatedAt: now.AddDate(0, -5, 0),
 		UpdatedAt: now,
