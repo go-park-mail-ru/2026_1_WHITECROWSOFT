@@ -1,4 +1,4 @@
-package handlers
+package notes
 
 import (
 	"errors"
@@ -90,11 +90,11 @@ func (h *NoteHandler) GetNote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	blocks := h.mockData.GetBlocksByNoteID(foundNote.ID)
-	
+
 	blocksWithStates := make([]map[string]interface{}, 0, len(blocks))
 	for _, block := range blocks {
 		states := h.mockData.GetBlockStatesByBlockID(block.ID)
-		
+
 		blockData := map[string]interface{}{
 			"id":       block.ID,
 			"note_id":  block.NoteID,

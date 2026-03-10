@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -40,14 +39,7 @@ func main() {
 	<-stop
 	log.Info("Shutting down server...")
 
-	strContextTime := os.Getenv("CONTEXT_TIME")
-	contextTime, err := strconv.Atoi(strContextTime)
-	if err != nil {
-		log.Warn("Context time was not found, use default context time - 5 seconds")
-		contextTime = 5
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(contextTime)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {

@@ -84,7 +84,7 @@ func TestSignupUser(t *testing.T) {
 				}
 
 				cookies := w.Result().Cookies()
-				if len(cookies) == 0 || cookies[0].Name != CookieName {
+				if len(cookies) == 0 || cookies[0].Name != authHandler.jwtConfig.CookieName {
 					t.Error("JWT Cookie was not set")
 				}
 			} else {

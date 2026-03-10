@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/config"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/dto"
@@ -15,11 +14,6 @@ import (
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
 
 	"github.com/go-playground/validator/v10"
-)
-
-const (
-	CookieName    = "NoterianCookieJWT"
-	CookieTimeJWT = time.Hour
 )
 
 var (
@@ -62,19 +56,19 @@ func getFromBody[T dto.SignInUser | dto.SignUpUser](r *http.Request, u *T) error
 }
 
 func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.Account) {
-	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtConfig.Secret)
+	tokenStr, err := jwt.GenerateToken(user.ID.String(), a.jwtConfig.CookieTimeJWT, a.jwtConfig.Secret)
 	if err != nil {
 		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrTokenCreation)
 		return
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     CookieName,
+		Name:     a.jwtConfig.CookieName,
 		Value:    tokenStr,
 		HttpOnly: true,
 		Secure:   isSecure,
 		SameSite: http.SameSiteStrictMode,
-		MaxAge:   int(CookieTimeJWT.Seconds()),
+		MaxAge:   int(a.jwtConfig.CookieTimeJWT.Seconds()),
 		Path:     "/",
 	})
 
@@ -87,6 +81,7 @@ func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.Account) {
 func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+		return
 	}
 	defer r.Body.Close()
 
@@ -114,6 +109,7 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+		return
 	}
 	defer r.Body.Close()
 
@@ -140,7 +136,7 @@ func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 
 func (a *Handler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     CookieName,
+		Name:     a.jwtConfig.CookieName,
 		Value:    "",
 		HttpOnly: true,
 		Secure:   isSecure,
