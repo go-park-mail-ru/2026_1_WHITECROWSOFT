@@ -61,7 +61,7 @@ func (m *MockData) init() {
 			NoteID:      noteID,
 			BlockTypeID: 1,
 			Position:    0,
-			Content:     "Пример\n\nПервый параграф текста\nВторой параграф\nТретий параграф",
+			Content:     "Пример" + strconv.Itoa(i) + "\n\nПервый параграф текста\nВторой параграф\nТретий параграф",
 			CreatedAt:   now.AddDate(0, -i, 0),
 			UpdatedAt:   now,
 		}
