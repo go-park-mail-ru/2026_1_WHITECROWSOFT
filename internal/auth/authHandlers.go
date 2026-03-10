@@ -27,7 +27,7 @@ var (
 	ErrInternal         = errors.New("internal server error")
 	ErrUnauthorized     = errors.New("unauthorized")
 	ErrMethodNotAllowed = errors.New("method not allowed")
-	ErrBadCredentials   = errors.New("incorrect username or password")
+	ErrBadCredentials   = errors.New("Неверный логин или пароль!")
 	validate            = validator.New()
 	isSecure            = os.Getenv("IS_SECURE") == "true"
 )
