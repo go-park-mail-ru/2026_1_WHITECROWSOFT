@@ -27,7 +27,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("401 if cookie missing", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 
 		handler := Auth(nextHandler, cfg)
@@ -42,7 +42,7 @@ func TestAuthMiddleware(t *testing.T) {
 		validToken, err := jwt.GenerateToken("river_wyles", cfg.CookieTimeJWT, cfg.Secret)
 		assert.NoErrorf(t, err, "couldn't generate token: %q", err)
 
-		req := httptest.NewRequest("GET", "/", nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.AddCookie(&http.Cookie{Name: cfg.CookieName, Value: validToken})
 
 		rr := httptest.NewRecorder()
