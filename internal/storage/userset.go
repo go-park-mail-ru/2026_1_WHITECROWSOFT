@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrUserExist    = errors.New("user already exists")
-	ErrUserNotExist = errors.New("user not found")
+	ErrUserExist    = errors.New("Пользователь с таким логином уже существует!")
+	ErrUserNotExist = errors.New("Пользователь не найден!")
 )
 
 type UserSet struct {
