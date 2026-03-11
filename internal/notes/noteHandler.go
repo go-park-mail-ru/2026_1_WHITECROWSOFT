@@ -3,7 +3,6 @@ package notes
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/mock"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/models"
@@ -63,13 +62,12 @@ func (h *NoteHandler) GetAllNotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *NoteHandler) GetNote(w http.ResponseWriter, r *http.Request) {
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 3 {
+	noteIDStr := r.PathValue("id")
+	if noteIDStr == "" {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrNoteIDRequired)
 		return
 	}
 
-	noteIDStr := pathParts[2]
 	noteID, err := uuid.Parse(noteIDStr)
 	if err != nil {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidNoteID)
