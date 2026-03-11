@@ -55,7 +55,7 @@ func TestJSONResponse(t *testing.T) {
 			status: http.StatusNoContent,
 			data:   nil,
 			checkResponse: func(t *testing.T, body []byte) {
-				assert.Equal(t, "null\n", string(body))
+				assert.Equal(t, "", string(body))
 			},
 		},
 		{

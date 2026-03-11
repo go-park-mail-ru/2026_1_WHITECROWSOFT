@@ -34,10 +34,10 @@ func TestRouter_Integration(t *testing.T) {
 		url            string
 		expectedStatus int
 	}{
-		{"ping", "GET", "/ping", http.StatusOK},
-		{"signup_method_check", "GET", "/signup", http.StatusMethodNotAllowed},
-		{"protected_no_auth", "GET", "/notes", http.StatusUnauthorized},
-		{"not_found", "GET", "/unknown", http.StatusNotFound},
+		{"ping", http.MethodGet, "/ping", http.StatusOK},
+		{"signup_method_check", http.MethodGet, "/signup", http.StatusMethodNotAllowed},
+		{"protected_no_auth", http.MethodGet, "/notes", http.StatusUnauthorized},
+		{"not_found", http.MethodGet, "/unknown", http.StatusNotFound},
 	}
 
 	for _, tt := range tests {

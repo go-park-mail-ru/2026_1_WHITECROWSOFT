@@ -107,6 +107,9 @@ func TestNoteHandler_GetAllNotes(t *testing.T) {
 func TestNoteHandler_GetNote(t *testing.T) {
 	mockData := mock.NewMockData()
 	handler := NewNoteHandler(mockData)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /notes/", handler.GetNote)
+	mux.HandleFunc("GET /notes/{id}", handler.GetNote)
 
 	existingNote := mockData.Notes[0]
 	nonExistentNoteID := uuid.New()
@@ -147,7 +150,7 @@ func TestNoteHandler_GetNote(t *testing.T) {
 		},
 		{
 			name:           "note id required - path too short",
-			path:           "/notes",
+			path:           "/notes/",
 			expectedStatus: http.StatusBadRequest,
 			validateResponse: func(t *testing.T, resp map[string]interface{}) {
 				err, ok := resp["error"].(string)
@@ -182,7 +185,7 @@ func TestNoteHandler_GetNote(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
 			w := httptest.NewRecorder()
 
-			handler.GetNote(w, req)
+			mux.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
@@ -198,13 +201,15 @@ func TestNoteHandler_GetNote(t *testing.T) {
 func TestNoteHandler_GetNote_DataIntegrity(t *testing.T) {
 	mockData := mock.NewMockData()
 	handler := NewNoteHandler(mockData)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /notes/{id}", handler.GetNote)
 
 	testNote := mockData.Notes[0]
 
 	req := httptest.NewRequest(http.MethodGet, "/notes/"+testNote.ID.String(), nil)
 	w := httptest.NewRecorder()
 
-	handler.GetNote(w, req)
+	mux.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -255,6 +260,9 @@ func TestNoteHandler_GetNote_DataIntegrity(t *testing.T) {
 func TestNoteHandler_GetNote_PathVariations(t *testing.T) {
 	mockData := mock.NewMockData()
 	handler := NewNoteHandler(mockData)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /notes/{id}/", handler.GetNote)
+	mux.HandleFunc("GET /notes/{id}", handler.GetNote)
 
 	testNote := mockData.Notes[0]
 
@@ -285,7 +293,7 @@ func TestNoteHandler_GetNote_PathVariations(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
 			w := httptest.NewRecorder()
 
-			handler.GetNote(w, req)
+			mux.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 		})

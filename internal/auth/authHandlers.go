@@ -50,7 +50,7 @@ type UserResponse struct {
 func validateLogin(fl validator.FieldLevel) bool {
 	login := fl.Field().String()
 
-	validLoginRegex := regexp.MustCompile(`^[a-zA-Z0-9_.]+$`)
+	validLoginRegex := regexp.MustCompile(`^[a-zA-Zа-яА-Я0-9_.]+$`)
 	if !validLoginRegex.MatchString(login) {
 		return false
 	}
@@ -75,7 +75,7 @@ func validatePassword(fl validator.FieldLevel) bool {
 		return false
 	}
 
-	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasUppercase := regexp.MustCompile(`[A-ZА-Я]`).MatchString(password)
 
 	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
 
