@@ -87,6 +87,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
