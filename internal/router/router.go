@@ -8,6 +8,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/handlers"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/middleware"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/mock"
+	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/notes"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/storage"
 )
 
@@ -18,7 +19,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 func New(cfg *config.Config) http.Handler {
 	authHandler := auth.NewHandler(cfg.JWT, storage.NewUserSet())
 	mockData := mock.NewMockData()
-	noteHandler := handlers.NewNoteHandler(mockData)
+	noteHandler := notes.NewNoteHandler(mockData)
 	r := http.NewServeMux()
 
 	r.HandleFunc("GET /ping", pingHandler)

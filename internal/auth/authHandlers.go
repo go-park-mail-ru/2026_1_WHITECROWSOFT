@@ -5,7 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"time"
+	"regexp"
+	"strings"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/config"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/dto"
@@ -18,8 +19,7 @@ import (
 )
 
 const (
-	CookieName    = "NoterianCookieJWT"
-	CookieTimeJWT = time.Hour
+	minPasswordLength = 4
 )
 
 var (
@@ -47,6 +47,49 @@ type UserResponse struct {
 	Login string `json:"login"`
 }
 
+func validateLogin(fl validator.FieldLevel) bool {
+	login := fl.Field().String()
+
+	validLoginRegex := regexp.MustCompile(`^[a-zA-Z0-9_.]+$`)
+	if !validLoginRegex.MatchString(login) {
+		return false
+	}
+
+	if strings.HasPrefix(login, "_") || strings.HasPrefix(login, ".") ||
+		strings.HasSuffix(login, "_") || strings.HasSuffix(login, ".") {
+		return false
+	}
+
+	if strings.Contains(login, "__") || strings.Contains(login, "..") ||
+		strings.Contains(login, "_.") || strings.Contains(login, "._") {
+		return false
+	}
+
+	return true
+}
+
+func validatePassword(fl validator.FieldLevel) bool {
+	password := fl.Field().String()
+
+	if len(password) < minPasswordLength {
+		return false
+	}
+
+	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
+
+	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
+
+	if !hasUppercase || !hasDigit {
+		return false
+	}
+	return true
+}
+
+func init() {
+	validate.RegisterValidation("login", validateLogin)
+	validate.RegisterValidation("password", validatePassword)
+}
+
 func NewHandler(jwtConfig config.JWTConfig, users UserRepository) *Handler {
 	return &Handler{
 		jwtConfig: jwtConfig,
@@ -62,19 +105,19 @@ func getFromBody[T dto.SignInUser | dto.SignUpUser](r *http.Request, u *T) error
 }
 
 func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.Account) {
-	tokenStr, err := jwt.GenerateToken(user.ID.String(), CookieTimeJWT, a.jwtConfig.Secret)
+	tokenStr, err := jwt.GenerateToken(user.ID.String(), a.jwtConfig.CookieTimeJWT, a.jwtConfig.Secret)
 	if err != nil {
 		helpers.JSONErrorResponse(w, http.StatusInternalServerError, jwt.ErrTokenCreation)
 		return
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     CookieName,
+		Name:     a.jwtConfig.CookieName,
 		Value:    tokenStr,
 		HttpOnly: true,
 		Secure:   isSecure,
 		SameSite: http.SameSiteStrictMode,
-		MaxAge:   int(CookieTimeJWT.Seconds()),
+		MaxAge:   int(a.jwtConfig.CookieTimeJWT.Seconds()),
 		Path:     "/",
 	})
 
@@ -87,6 +130,7 @@ func (a *Handler) saveUserCookie(w http.ResponseWriter, user *models.Account) {
 func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+		return
 	}
 	defer r.Body.Close()
 
@@ -96,6 +140,9 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
 		return
 	}
+
+	signUpUser.Login = strings.TrimSpace(signUpUser.Login)
+	signUpUser.Password = strings.TrimSpace(signUpUser.Password)
 
 	user, err := a.users.CreateUser(signUpUser.Login, signUpUser.Password)
 	if err != nil {
@@ -114,6 +161,7 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		helpers.JSONErrorResponse(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+		return
 	}
 	defer r.Body.Close()
 
@@ -123,6 +171,9 @@ func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
 		return
 	}
+
+	signInUser.Login = strings.TrimSpace(signInUser.Login)
+	signInUser.Password = strings.TrimSpace(signInUser.Password)
 
 	user, err := a.users.ValidateUser(signInUser.Login, signInUser.Password)
 	if err != nil {
@@ -140,7 +191,7 @@ func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 
 func (a *Handler) LogOutUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     CookieName,
+		Name:     a.jwtConfig.CookieName,
 		Value:    "",
 		HttpOnly: true,
 		Secure:   isSecure,

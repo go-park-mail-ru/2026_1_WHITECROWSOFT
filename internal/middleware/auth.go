@@ -13,7 +13,7 @@ import (
 
 func Auth(next http.Handler, jwtConfig config.JWTConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookieJWT, err := r.Cookie(auth.CookieName)
+		cookieJWT, err := r.Cookie(jwtConfig.CookieName)
 		if err != nil {
 			helpers.JSONErrorResponse(w, http.StatusUnauthorized, auth.ErrUnauthorized)
 			return

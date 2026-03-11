@@ -8,13 +8,17 @@ import (
 )
 
 const (
-	PORT             = "8000"
-	SHUTDOWN_TIMEOUT = 5
+	DEFAULT_PORT             = "8000"
+	DEFAULT_COOKIE_NAME      = "NoterianCookieJWT"
+	DEFAULT_COOKIE_TIME_JWT  = 3600
+	DEFAULT_SHUTDOWN_TIMEOUT = 5
 )
 
 type JWTConfig struct {
-	Secret string
-	Secure bool
+	Secret        string
+	CookieName    string
+	CookieTimeJWT time.Duration
+	Secure        bool
 }
 
 type ServerConfig struct {
@@ -33,14 +37,26 @@ func Load() *Config {
 		log.Fatalf("JWT_SECRET was not found, shutting down...")
 	}
 
+	cookieName := os.Getenv("COOKIE_NAME")
+	if cookieName == "" {
+		cookieName = DEFAULT_COOKIE_NAME
+	}
+
 	secure := os.Getenv("IS_SECURE") == "true"
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = PORT
+		port = DEFAULT_PORT
 	}
 
-	shutdownTimeout := SHUTDOWN_TIMEOUT * time.Second
+	cookieTimeJWT := DEFAULT_COOKIE_TIME_JWT * time.Second
+	if strCookieTimeJWT := os.Getenv("COOKIE_TIME_JWT"); strCookieTimeJWT != "" {
+		if intCookieTimeJWT, err := strconv.Atoi(strCookieTimeJWT); err != nil {
+			cookieTimeJWT = time.Duration(intCookieTimeJWT) * time.Second
+		}
+	}
+
+	shutdownTimeout := DEFAULT_SHUTDOWN_TIMEOUT * time.Second
 	if timeoutStr := os.Getenv("SHUTDOWN_TIMEOUT"); timeoutStr != "" {
 		if timeout, err := strconv.Atoi(timeoutStr); err == nil {
 			shutdownTimeout = time.Duration(timeout) * time.Second
@@ -49,8 +65,10 @@ func Load() *Config {
 
 	return &Config{
 		JWT: JWTConfig{
-			Secret: jwtSecret,
-			Secure: secure,
+			Secret:        jwtSecret,
+			CookieName:    cookieName,
+			CookieTimeJWT: cookieTimeJWT,
+			Secure:        secure,
 		},
 		Server: ServerConfig{
 			Port:            port,
