@@ -261,6 +261,7 @@ func TestNoteHandler_GetNote_PathVariations(t *testing.T) {
 	mockData := mock.NewMockData()
 	handler := NewNoteHandler(mockData)
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /notes/{id}/", handler.GetNote)
 	mux.HandleFunc("GET /notes/{id}", handler.GetNote)
 
 	testNote := mockData.Notes[0]
