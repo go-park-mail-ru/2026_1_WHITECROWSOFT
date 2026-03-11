@@ -21,6 +21,17 @@ func NewMockData() *MockData {
 	return mock
 }
 
+func basicState(block models.Block) models.BlockState {
+	stateID := uuid.New()
+	return models.BlockState{
+		ID:         stateID,
+		BlockID:    block.ID,
+		Formatting: `{"format":"text","tags":["пример","тест","мок"]}`,
+		CreatedAt:  time.Now().AddDate(0, -1, 0),
+		UpdatedAt:  time.Now(),
+	}
+}
+
 func (m *MockData) init() {
 	now := time.Now()
 
@@ -64,6 +75,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -86,16 +98,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
-
-	stateID := uuid.New()
-	state := models.BlockState{
-		ID:         stateID,
-		BlockID:    blockID,
-		Formatting: `{"format":"text","tags":["пример","тест","мок"]}`,
-		CreatedAt:  now.AddDate(0, -1, 0),
-		UpdatedAt:  now,
-	}
-	m.BlockStates = append(m.BlockStates, state)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 
 	noteID = uuid.New()
 
@@ -120,6 +123,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -131,6 +135,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -142,16 +147,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
-
-	stateID = uuid.New()
-	state = models.BlockState{
-		ID:         stateID,
-		BlockID:    blockID,
-		Formatting: `{"format":"text","tags":["пример","тест","мок"]}`,
-		CreatedAt:  now.AddDate(0, -2, 0),
-		UpdatedAt:  now,
-	}
-	m.BlockStates = append(m.BlockStates, state)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 
 	noteID = uuid.New()
 
@@ -176,6 +172,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -187,6 +184,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -198,16 +196,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
-
-	stateID = uuid.New()
-	state = models.BlockState{
-		ID:         stateID,
-		BlockID:    blockID,
-		Formatting: `{"format":"text","tags":["пример","тест","мок"]}`,
-		CreatedAt:  now.AddDate(0, -3, 0),
-		UpdatedAt:  now,
-	}
-	m.BlockStates = append(m.BlockStates, state)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 
 	noteID = uuid.New()
 
@@ -232,6 +221,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -243,6 +233,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -254,16 +245,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
-
-	stateID = uuid.New()
-	state = models.BlockState{
-		ID:         stateID,
-		BlockID:    blockID,
-		Formatting: `{"format":"text","tags":["пример","тест","мок"]}`,
-		CreatedAt:  now.AddDate(0, -4, 0),
-		UpdatedAt:  now,
-	}
-	m.BlockStates = append(m.BlockStates, state)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 
 	noteID = uuid.New()
 
@@ -288,6 +270,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -299,6 +282,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 	blockID = uuid.New()
 	block = models.Block{
 		ID:          blockID,
@@ -310,16 +294,7 @@ func (m *MockData) init() {
 		UpdatedAt:   now,
 	}
 	m.Blocks = append(m.Blocks, block)
-
-	stateID = uuid.New()
-	state = models.BlockState{
-		ID:         stateID,
-		BlockID:    blockID,
-		Formatting: `{"format":"text","tags":["пример","тест","мок"]}`,
-		CreatedAt:  now.AddDate(0, -5, 0),
-		UpdatedAt:  now,
-	}
-	m.BlockStates = append(m.BlockStates, state)
+	m.BlockStates = append(m.BlockStates, basicState(block))
 }
 
 func (m *MockData) GetBlocksByNoteID(noteID uuid.UUID) []models.Block {
