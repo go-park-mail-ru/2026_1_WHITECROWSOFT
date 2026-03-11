@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/config"
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/internal/dto"
@@ -14,6 +16,10 @@ import (
 	"github.com/go-park-mail-ru/2026_1_WHITECROWSOFT/pkg/jwt"
 
 	"github.com/go-playground/validator/v10"
+)
+
+const (
+	minPasswordLength = 4
 )
 
 var (
@@ -39,6 +45,49 @@ type Handler struct {
 type UserResponse struct {
 	ID    string `json:"id"`
 	Login string `json:"login"`
+}
+
+func validateLogin(fl validator.FieldLevel) bool {
+	login := fl.Field().String()
+
+	validLoginRegex := regexp.MustCompile(`^[a-zA-Z0-9_.]+$`)
+	if !validLoginRegex.MatchString(login) {
+		return false
+	}
+
+	if strings.HasPrefix(login, "_") || strings.HasPrefix(login, ".") ||
+		strings.HasSuffix(login, "_") || strings.HasSuffix(login, ".") {
+		return false
+	}
+
+	if strings.Contains(login, "__") || strings.Contains(login, "..") ||
+		strings.Contains(login, "_.") || strings.Contains(login, "._") {
+		return false
+	}
+
+	return true
+}
+
+func validatePassword(fl validator.FieldLevel) bool {
+	password := fl.Field().String()
+
+	if len(password) < minPasswordLength {
+		return false
+	}
+
+	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
+
+	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
+
+	if !hasUppercase || !hasDigit {
+		return false
+	}
+	return true
+}
+
+func init() {
+	validate.RegisterValidation("login", validateLogin)
+	validate.RegisterValidation("password", validatePassword)
 }
 
 func NewHandler(jwtConfig config.JWTConfig, users UserRepository) *Handler {
@@ -92,6 +141,9 @@ func (a *Handler) SignupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	signUpUser.Login = strings.TrimSpace(signUpUser.Login)
+	signUpUser.Password = strings.TrimSpace(signUpUser.Password)
+
 	user, err := a.users.CreateUser(signUpUser.Login, signUpUser.Password)
 	if err != nil {
 		switch {
@@ -119,6 +171,9 @@ func (a *Handler) SigninUser(w http.ResponseWriter, r *http.Request) {
 		helpers.JSONErrorResponse(w, http.StatusBadRequest, ErrInvalidInput)
 		return
 	}
+
+	signInUser.Login = strings.TrimSpace(signInUser.Login)
+	signInUser.Password = strings.TrimSpace(signInUser.Password)
 
 	user, err := a.users.ValidateUser(signInUser.Login, signInUser.Password)
 	if err != nil {
